@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "637686614153",
+    "project_id": "rituals-b3bed",
+    "storage_bucket": "rituals-b3bed.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:637686614153:android:70cad962d152a471361e58",
+        "android_client_info": {
+          "package_name": "com.example.rituals"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "637686614153-u7artuic4otp6ne59j2ilt3jb25jud1v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.rituals",
+            "certificate_hash": "f255bb1ebd9e61dc193c504690d3f679eda1538a"
+          }
+        },
+        {
+          "client_id": "637686614153-t097c2sv88tpnk7josd88t0bur78kao6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4ONclHXExQ1GHlKx7W0UIVLsc8tgOZBQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "637686614153-t097c2sv88tpnk7josd88t0bur78kao6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
