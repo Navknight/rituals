@@ -10,6 +10,37 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+const PHOTO_CACHE = 'ritual-photos-v1';
+
+// Cache-first for Firebase Storage relay photos.
+// Any relay photo the PWA loads is persisted locally so it survives Storage TTL.
+self.addEventListener('fetch', (event) => {
+  const url = event.request.url;
+  if (
+    url.includes('firebasestorage.googleapis.com') &&
+    url.includes('/relay/')
+  ) {
+    event.respondWith(
+      caches.open(PHOTO_CACHE).then(async (cache) => {
+        // Serve from cache if available (survives Storage deletion)
+        const cached = await cache.match(url);
+        if (cached) return cached;
+
+        // Not cached yet — fetch, cache, return
+        try {
+          const response = await fetch(event.request);
+          if (response.ok) {
+            cache.put(url, response.clone());
+          }
+          return response;
+        } catch {
+          return new Response('', { status: 503 });
+        }
+      })
+    );
+  }
+});
+
 // Show notification for background messages
 messaging.onBackgroundMessage((message) => {
   console.log('[SW] Background message:', message);
@@ -21,28 +52,26 @@ messaging.onBackgroundMessage((message) => {
     icon: '/icons/Icon-192.png',
     badge: '/icons/Icon-192.png',
     data: data,
-    tag: data.groupId ?? 'rituals',   // collapse duplicate group notifications
+    tag: data.groupId ?? 'rituals',
   });
 });
 
 // Open/focus the app when a notification is tapped
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const groupId = event.notification.data?.groupId;
+  const { groupId, ritualId } = event.notification.data ?? {};
   const targetUrl = groupId
     ? self.location.origin + '/home/' + groupId
     : self.location.origin + '/';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Focus existing window if already open
       for (const client of windowClients) {
         if (client.url.startsWith(self.location.origin) && 'focus' in client) {
-          client.postMessage({ type: 'NOTIFICATION_TAP', groupId });
+          client.postMessage({ type: 'NOTIFICATION_TAP', groupId, ritualId });
           return client.focus();
         }
       }
-      // Otherwise open a new window
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }

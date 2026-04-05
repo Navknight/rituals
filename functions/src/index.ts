@@ -123,16 +123,99 @@ export const onNudgeCreated = onDocumentCreated(
   }
 );
 
+// Runs every hour — sends reminder notifications for rituals whose reminderTime
+// matches the current UTC hour on a scheduled day.
+export const sendDailyReminders = onSchedule("every 60 minutes", async () => {
+  const now = new Date();
+  const hour = now.getUTCHours().toString().padStart(2, "0");
+  const minute = now.getUTCMinutes().toString().padStart(2, "0");
+  const currentTime = `${hour}:${minute}`;
+
+  // JS getDay(): 0=Sun..6=Sat → Dart weekday: 1=Mon..7=Sun
+  const jsDay = now.getUTCDay();
+  const dartWeekday = jsDay === 0 ? 7 : jsDay;
+
+  const groupsSnapshot = await db.collection("groups").get();
+
+  for (const groupDoc of groupsSnapshot.docs) {
+    const groupId = groupDoc.id;
+    const memberIds: string[] = groupDoc.data().memberIds ?? [];
+
+    const ritualsSnapshot = await db
+      .collection("groups")
+      .doc(groupId)
+      .collection("rituals")
+      .where("reminderTime", "==", currentTime)
+      .get();
+
+    for (const ritualDoc of ritualsSnapshot.docs) {
+      const ritual = ritualDoc.data();
+      const scheduleDays: number[] = ritual.scheduleDays ?? [];
+      if (!scheduleDays.includes(dartWeekday)) continue;
+
+      const tokens: string[] = [];
+      for (const uid of memberIds) {
+        const userDoc = await db.collection("users").doc(uid).get();
+        const token = userDoc.data()?.fcmToken;
+        if (token) tokens.push(token);
+      }
+      if (tokens.length === 0) continue;
+
+      await messaging.sendEachForMulticast({
+        tokens,
+        notification: {
+          title: `${ritual.emoji as string} Time for ${ritual.title as string}!`,
+          body: "Don't forget your ritual today",
+        },
+        data: {groupId, ritualId: ritualDoc.id, type: "reminder"},
+      });
+
+      console.log(
+        `Reminder sent for ${ritual.title as string} in group ${groupId}`
+      );
+    }
+  }
+});
+
 export const cleanupRelayPhotos = onSchedule("every 24 hours", async () => {
   const bucket = getStorage().bucket();
   const [files] = await bucket.getFiles({prefix: "relay/"});
 
-  const cutoffMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const toDelete = files.filter((file) => {
-    const created = file.metadata.timeCreated as string | undefined;
-    return created && new Date(created).getTime() < cutoffMs;
+  // Sort oldest first (FIFO)
+  const sorted = [...files].sort((a, b) => {
+    const aTime = new Date(a.metadata.timeCreated as string).getTime();
+    const bTime = new Date(b.metadata.timeCreated as string).getTime();
+    return aTime - bTime;
   });
 
+  // Sum total size
+  const totalBytes = sorted.reduce((sum, file) => {
+    return sum + parseInt((file.metadata.size as string) ?? "0", 10);
+  }, 0);
+
+  const limitBytes = 900 * 1024 * 1024; // 900 MB — 100 MB headroom on 1 GB free tier
+
+  if (totalBytes <= limitBytes) {
+    console.log(`Storage OK: ${(totalBytes / 1024 / 1024).toFixed(1)} MB used`);
+    return;
+  }
+
+  // Delete oldest files until under limit
+  let remaining = totalBytes;
+  let freed = 0;
+  const toDelete = [];
+
+  for (const file of sorted) {
+    if (remaining <= limitBytes) break;
+    const fileSize = parseInt((file.metadata.size as string) ?? "0", 10);
+    toDelete.push(file);
+    remaining -= fileSize;
+    freed += fileSize;
+  }
+
   await Promise.all(toDelete.map((file) => file.delete()));
-  console.log(`Deleted ${toDelete.length} relay photos older than 7 days`);
+  console.log(
+    `FIFO cleanup: deleted ${toDelete.length} files, freed ${(freed / 1024 / 1024).toFixed(1)} MB. ` +
+    `Now ~${(remaining / 1024 / 1024).toFixed(1)} MB used`
+  );
 });

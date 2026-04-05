@@ -37,6 +37,13 @@ class UserService {
     });
   }
 
+  Stream<UserProfile?> streamProfile(String uid) {
+    return firestore.collection('users').doc(uid).snapshots().map((doc) {
+      if (!doc.exists) return null;
+      return UserProfile.fromMap(doc.data()!);
+    });
+  }
+
   Future<UserProfile?> getProfile(String uid) async {
     final doc = await firestore.collection('users').doc(uid).get();
     if (!doc.exists) return null;

@@ -20,6 +20,11 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    match /restoreRequests/{docId} {
+      // Any signed-in user can create a request or fulfill one (write covers both)
+      allow read, write: if isSignedIn();
+    }
+
     match /groups/{groupId} {
       // Members can read; non-members can also read (needed for join flow)
       allow read: if isSignedIn();
@@ -35,6 +40,10 @@ service cloud.firestore {
         allow read, write: if isGroupMember(groupId);
 
         match /entries/{entryId} {
+          allow read, write: if isGroupMember(groupId);
+        }
+
+        match /nudges/{nudgeId} {
           allow read, write: if isGroupMember(groupId);
         }
       }

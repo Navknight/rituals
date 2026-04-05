@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -99,27 +100,37 @@ class _GroupGateState extends ConsumerState<GroupGate> {
   UserProfile? _profile;
   bool _loading = true;
   String? _error;
+  StreamSubscription<UserProfile?>? _profileSub;
 
   @override
   void initState() {
     super.initState();
     debugPrint('[GroupGate] initState uid=${widget.uid}');
-    _loadProfile();
+    _initProfile();
   }
 
-  Future<void> _loadProfile() async {
+  Future<void> _initProfile() async {
+    // Ensure profile doc exists first (creates it if new user)
     try {
       final user = ref.read(authStateProvider).value;
       debugPrint('[GroupGate] _loadProfile user=${user?.uid}');
       if (user == null) {
-        debugPrint('[GroupGate] user is null — auth not ready yet');
         if (mounted) setState(() => _loading = false);
         return;
       }
-      final profile = await ref
-          .read(userServiceProvider)
-          .getOrCreateProfile(user);
-      debugPrint('[GroupGate] profile loaded, groupIds=${profile.groupIds}');
+      await ref.read(userServiceProvider).getOrCreateProfile(user);
+    } catch (e, st) {
+      debugPrint('[GroupGate] ERROR creating profile: $e\n$st');
+      if (mounted) setState(() { _loading = false; _error = e.toString(); });
+      return;
+    }
+
+    // Now stream the profile — auto-updates when groupIds changes
+    _profileSub = ref
+        .read(userServiceProvider)
+        .streamProfile(widget.uid)
+        .listen((profile) {
+      debugPrint('[GroupGate] profile updated, groupIds=${profile?.groupIds}');
       if (mounted) {
         setState(() {
           _profile = profile;
@@ -127,15 +138,16 @@ class _GroupGateState extends ConsumerState<GroupGate> {
           _error = null;
         });
       }
-    } catch (e, st) {
-      debugPrint('[GroupGate] ERROR loading profile: $e\n$st');
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _error = e.toString();
-        });
-      }
-    }
+    }, onError: (e, st) {
+      debugPrint('[GroupGate] stream error: $e\n$st');
+      if (mounted) setState(() { _loading = false; _error = e.toString(); });
+    });
+  }
+
+  @override
+  void dispose() {
+    _profileSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -165,11 +177,9 @@ class _GroupGateState extends ConsumerState<GroupGate> {
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: () {
-                    setState(() {
-                      _loading = true;
-                      _error = null;
-                    });
-                    _loadProfile();
+                    _profileSub?.cancel();
+                    setState(() { _loading = true; _error = null; });
+                    _initProfile();
                   },
                   icon: const Icon(Icons.refresh),
                   label: const Text('Retry'),

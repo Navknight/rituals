@@ -6,11 +6,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import 'package:rituals/models/ritual.dart';
 import 'package:rituals/models/ritual_entry.dart';
 import 'package:rituals/services/streak_service.dart';
 import 'package:rituals/features/camera/camera_screen.dart';
+import 'package:rituals/services/restore_service.dart';
 import 'package:rituals/shared/download.dart';
 
 class RitualDetailScreen extends ConsumerStatefulWidget {
@@ -138,11 +139,10 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
         await downloadImageWeb(entry.photoUrl, 'ritual_photo.jpg');
       } else {
         if (entry.localPath != null && File(entry.localPath!).existsSync()) {
-          await ImageGallerySaver.saveFile(entry.localPath!);
+          await Gal.putImage(entry.localPath!);
         } else {
           final response = await http.get(Uri.parse(entry.photoUrl));
-          await ImageGallerySaver.saveImage(response.bodyBytes,
-              name: 'ritual_photo');
+          await Gal.putImageBytes(response.bodyBytes);
         }
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -224,7 +224,6 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
                           allMemberIds: _allMemberIds,
                           memberNames: _memberNames,
                           entries: _entries,
-                          scheduledDays: ritual.scheduleDays,
                           onNudge: _sendNudge,
                         ),
 
@@ -232,6 +231,8 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
 
                         // Recent photos from all members
                         _RecentPhotosSection(
+                          groupId: widget.groupId,
+                          ritualId: widget.ritual.id,
                           entries: _entries,
                           memberNames: _memberNames,
                           onSave: (entry) => _savePhoto(context, entry),
@@ -417,11 +418,15 @@ class _StatCard extends StatelessWidget {
 
 class _RecentPhotosSection extends StatelessWidget {
   const _RecentPhotosSection({
+    required this.groupId,
+    required this.ritualId,
     required this.entries,
     required this.memberNames,
     required this.onSave,
   });
 
+  final String groupId;
+  final String ritualId;
   final List<RitualEntry> entries;
   final Map<String, String> memberNames;
   final void Function(RitualEntry) onSave;
@@ -470,7 +475,7 @@ class _RecentPhotosSection extends StatelessWidget {
                   entries: dayEntries,
                   memberNames: memberNames,
                   date: firstEntry.createdAt,
-                  onTap: () => _showDayPhotos(context, dayEntries, onSave),
+                  onTap: () => _showDayPhotos(context, dayEntries, onSave, groupId, ritualId),
                 );
               },
             ),
@@ -481,7 +486,7 @@ class _RecentPhotosSection extends StatelessWidget {
   }
 
   void _showDayPhotos(BuildContext context, List<RitualEntry> dayEntries,
-      void Function(RitualEntry) onSave) {
+      void Function(RitualEntry) onSave, String groupId, String ritualId) {
     final theme = Theme.of(context);
     final date = dayEntries.first.createdAt;
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -525,9 +530,12 @@ class _RecentPhotosSection extends StatelessWidget {
                   final entry = dayEntries[index];
                   final name = memberNames[entry.userId] ?? 'Unknown';
                   return _ExpandedPhotoCard(
-                      entry: entry,
-                      posterName: name,
-                      onSave: () => onSave(entry));
+                    groupId: groupId,
+                    ritualId: ritualId,
+                    entry: entry,
+                    posterName: name,
+                    onSave: () => onSave(entry),
+                  );
                 },
               ),
             ),
@@ -676,108 +684,184 @@ class _DayStack extends StatelessWidget {
 }
 
 // Full photo card shown in the bottom sheet popup
-class _ExpandedPhotoCard extends StatelessWidget {
+class _ExpandedPhotoCard extends StatefulWidget {
   const _ExpandedPhotoCard({
+    required this.groupId,
+    required this.ritualId,
     required this.entry,
     required this.posterName,
     required this.onSave,
   });
 
+  final String groupId;
+  final String ritualId;
   final RitualEntry entry;
   final String posterName;
   final VoidCallback onSave;
 
   @override
+  State<_ExpandedPhotoCard> createState() => _ExpandedPhotoCardState();
+}
+
+class _ExpandedPhotoCardState extends State<_ExpandedPhotoCard> {
+  late String _currentUrl;
+  bool _restoreRequested = false;
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _entryStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUrl = widget.entry.photoUrl;
+    _entryStream = FirebaseFirestore.instance
+        .collection('groups')
+        .doc(widget.groupId)
+        .collection('rituals')
+        .doc(widget.ritualId)
+        .collection('entries')
+        .doc(widget.entry.id)
+        .snapshots();
+  }
+
+  void _onImageError() {
+    if (_restoreRequested) return;
+    setState(() => _restoreRequested = true);
+    RestoreService().requestRestore(
+      groupId: widget.groupId,
+      ritualId: widget.ritualId,
+      entryId: widget.entry.id,
+      originalUrl: _currentUrl,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Photo
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: AspectRatio(
-              aspectRatio: 4 / 3,
-              child: _buildImage(),
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _entryStream,
+      builder: (context, snapshot) {
+        // Update URL if a peer restored the photo
+        final newUrl = snapshot.data?.data()?['photoUrl'] as String?;
+        if (newUrl != null && newUrl != _currentUrl) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() { _currentUrl = newUrl; _restoreRequested = false; });
+          });
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
             ),
           ),
-          // Info
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Text(
-                    posterName.isNotEmpty ? posterName[0].toUpperCase() : '?',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Photo
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: _buildImage(),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(posterName, style: theme.textTheme.bodyMedium),
-                      if (entry.caption != null && entry.caption!.isNotEmpty)
-                        Text(
-                          entry.caption!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+              ),
+              // Info
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      child: Text(
+                        widget.posterName.isNotEmpty
+                            ? widget.posterName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onPrimaryContainer,
                         ),
-                    ],
-                  ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.posterName,
+                              style: theme.textTheme.bodyMedium),
+                          if (widget.entry.caption != null &&
+                              widget.entry.caption!.isNotEmpty)
+                            Text(
+                              widget.entry.caption!,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      _formatTime(widget.entry.createdAt),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.download_outlined, size: 20),
+                      visualDensity: VisualDensity.compact,
+                      tooltip: 'Save photo',
+                      onPressed: widget.onSave,
+                    ),
+                  ],
                 ),
-                Text(
-                  _formatTime(entry.createdAt),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(Icons.download_outlined, size: 20),
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Save photo',
-                  onPressed: onSave,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildImage() {
-    if (!kIsWeb && entry.localPath != null && entry.localPath!.isNotEmpty) {
-      final file = File(entry.localPath!);
+    if (!kIsWeb &&
+        widget.entry.localPath != null &&
+        widget.entry.localPath!.isNotEmpty) {
+      final file = File(widget.entry.localPath!);
       if (file.existsSync()) {
         return Image.file(file, fit: BoxFit.cover);
       }
     }
+    if (_restoreRequested) {
+      return Container(
+        color: Colors.grey[100],
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 8),
+              Text('Restoring photo…',
+                  style: TextStyle(color: Colors.grey, fontSize: 12)),
+            ],
+          ),
+        ),
+      );
+    }
     return Image.network(
-      entry.photoUrl,
+      _currentUrl,
       fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => Container(
-        color: Colors.grey[200],
-        child: const Icon(Icons.photo, size: 48, color: Colors.grey),
-      ),
+      errorBuilder: (_, _, _) {
+        _onImageError();
+        return Container(
+          color: Colors.grey[200],
+          child: const Icon(Icons.photo, size: 48, color: Colors.grey),
+        );
+      },
     );
   }
 
@@ -795,14 +879,12 @@ class _NudgeSection extends StatefulWidget {
     required this.allMemberIds,
     required this.memberNames,
     required this.entries,
-    required this.scheduledDays,
     required this.onNudge,
   });
 
   final List<String> allMemberIds;
   final Map<String, String> memberNames;
   final List<RitualEntry> entries;
-  final List<int> scheduledDays;
   final Future<void> Function(String uid) onNudge;
 
   @override
@@ -815,8 +897,6 @@ class _NudgeSectionState extends State<_NudgeSection> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    // Only show on scheduled days
-    if (!widget.scheduledDays.contains(now.weekday)) return const SizedBox.shrink();
 
     final todayPosters = widget.entries
         .where((e) =>
