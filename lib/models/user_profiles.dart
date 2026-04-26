@@ -7,11 +7,14 @@ class UserProfile {
   final String? fcmToken;
   final DateTime createdAt;
 
+  final String? photoUrl;
+
   UserProfile({
     required this.uid,
     required this.displayName,
     this.groupIds = const [],
     this.fcmToken,
+    this.photoUrl,
     required this.createdAt,
   });
 
@@ -22,6 +25,7 @@ class UserProfile {
       groupIds: List<String>.from(map['groupIds'] ??
           (map['groupId'] != null ? [map['groupId']] : [])),
       fcmToken: map['fcmToken'] as String?,
+      photoUrl: map['photoUrl'] as String?,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
   }
@@ -32,6 +36,7 @@ class UserProfile {
       'displayName': displayName,
       'groupIds': groupIds,
       'fcmToken': fcmToken,
+      'photoUrl': photoUrl,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }

@@ -8,11 +8,19 @@ class UserService {
   Future<UserProfile> getOrCreateProfile(User user) async {
     final doc = await firestore.collection('users').doc(user.uid).get();
     if (doc.exists) {
-      return UserProfile.fromMap(doc.data()!);
+      // Keep photoUrl in sync with Google account
+      if (user.photoURL != null) {
+        await firestore.collection('users').doc(user.uid).update({
+          'photoUrl': user.photoURL,
+          'displayName': user.displayName ?? doc.data()!['displayName'],
+        });
+      }
+      return UserProfile.fromMap({...doc.data()!, 'photoUrl': user.photoURL});
     }
     final profile = UserProfile(
       uid: user.uid,
       displayName: user.displayName ?? 'Anonymous',
+      photoUrl: user.photoURL,
       createdAt: DateTime.now(),
     );
     await firestore.collection('users').doc(user.uid).set(profile.toMap());

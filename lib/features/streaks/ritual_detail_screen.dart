@@ -13,6 +13,7 @@ import 'package:rituals/services/streak_service.dart';
 import 'package:rituals/features/camera/camera_screen.dart';
 import 'package:rituals/services/restore_service.dart';
 import 'package:rituals/shared/download.dart';
+import 'package:rituals/shared/user_avatar.dart';
 
 class RitualDetailScreen extends ConsumerStatefulWidget {
   const RitualDetailScreen({
@@ -34,6 +35,7 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
   StreakInfo? _streakInfo;
   List<RitualEntry> _entries = [];
   Map<String, String> _memberNames = {};
+  Map<String, String?> _memberPhotos = {};
   List<String> _allMemberIds = [];
   bool _loading = true;
   String? _error;
@@ -74,9 +76,11 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
           List<String>.from(groupDoc.data()?['memberIds'] ?? []);
 
       final names = <String, String>{};
+      final photos = <String, String?>{};
       for (final uid in allMemberIds) {
         final userDoc = await _firestore.collection('users').doc(uid).get();
         names[uid] = userDoc.data()?['displayName'] ?? 'Unknown';
+        photos[uid] = userDoc.data()?['photoUrl'] as String?;
       }
 
       if (mounted) {
@@ -84,6 +88,7 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
           _streakInfo = streakInfo;
           _entries = entries;
           _memberNames = names;
+          _memberPhotos = photos;
           _allMemberIds = allMemberIds;
           _loading = false;
           _error = null;
@@ -223,6 +228,7 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
                         _NudgeSection(
                           allMemberIds: _allMemberIds,
                           memberNames: _memberNames,
+                          memberPhotos: _memberPhotos,
                           entries: _entries,
                           onNudge: _sendNudge,
                         ),
@@ -235,6 +241,7 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
                           ritualId: widget.ritual.id,
                           entries: _entries,
                           memberNames: _memberNames,
+                          memberPhotos: _memberPhotos,
                           onSave: (entry) => _savePhoto(context, entry),
                         ),
 
@@ -422,6 +429,7 @@ class _RecentPhotosSection extends StatelessWidget {
     required this.ritualId,
     required this.entries,
     required this.memberNames,
+    required this.memberPhotos,
     required this.onSave,
   });
 
@@ -429,6 +437,7 @@ class _RecentPhotosSection extends StatelessWidget {
   final String ritualId;
   final List<RitualEntry> entries;
   final Map<String, String> memberNames;
+  final Map<String, String?> memberPhotos;
   final void Function(RitualEntry) onSave;
 
   @override
@@ -475,7 +484,7 @@ class _RecentPhotosSection extends StatelessWidget {
                   entries: dayEntries,
                   memberNames: memberNames,
                   date: firstEntry.createdAt,
-                  onTap: () => _showDayPhotos(context, dayEntries, onSave, groupId, ritualId),
+                  onTap: () => _showDayPhotos(context, dayEntries, onSave, groupId, ritualId, memberPhotos),
                 );
               },
             ),
@@ -486,7 +495,8 @@ class _RecentPhotosSection extends StatelessWidget {
   }
 
   void _showDayPhotos(BuildContext context, List<RitualEntry> dayEntries,
-      void Function(RitualEntry) onSave, String groupId, String ritualId) {
+      void Function(RitualEntry) onSave, String groupId, String ritualId,
+      Map<String, String?> memberPhotos) {
     final theme = Theme.of(context);
     final date = dayEntries.first.createdAt;
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -534,6 +544,7 @@ class _RecentPhotosSection extends StatelessWidget {
                     ritualId: ritualId,
                     entry: entry,
                     posterName: name,
+                    posterPhotoUrl: memberPhotos[entry.userId],
                     onSave: () => onSave(entry),
                   );
                 },
@@ -690,6 +701,7 @@ class _ExpandedPhotoCard extends StatefulWidget {
     required this.ritualId,
     required this.entry,
     required this.posterName,
+    this.posterPhotoUrl,
     required this.onSave,
   });
 
@@ -697,6 +709,7 @@ class _ExpandedPhotoCard extends StatefulWidget {
   final String ritualId;
   final RitualEntry entry;
   final String posterName;
+  final String? posterPhotoUrl;
   final VoidCallback onSave;
 
   @override
@@ -772,19 +785,10 @@ class _ExpandedPhotoCardState extends State<_ExpandedPhotoCard> {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    CircleAvatar(
+                    UserAvatar(
+                      name: widget.posterName,
+                      photoUrl: widget.posterPhotoUrl,
                       radius: 14,
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      child: Text(
-                        widget.posterName.isNotEmpty
-                            ? widget.posterName[0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
-                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -878,12 +882,14 @@ class _NudgeSection extends StatefulWidget {
   const _NudgeSection({
     required this.allMemberIds,
     required this.memberNames,
+    required this.memberPhotos,
     required this.entries,
     required this.onNudge,
   });
 
   final List<String> allMemberIds;
   final Map<String, String> memberNames;
+  final Map<String, String?> memberPhotos;
   final List<RitualEntry> entries;
   final Future<void> Function(String uid) onNudge;
 
@@ -936,17 +942,10 @@ class _NudgeSectionState extends State<_NudgeSection> {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
-                  CircleAvatar(
+                  UserAvatar(
+                    name: name,
+                    photoUrl: widget.memberPhotos[uid],
                     radius: 16,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : '?',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onPrimaryContainer,
-                      ),
-                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(

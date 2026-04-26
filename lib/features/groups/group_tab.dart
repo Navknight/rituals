@@ -6,6 +6,7 @@ import 'package:rituals/features/auth/auth_provider.dart';
 import 'package:rituals/features/groups/group_provider.dart';
 import 'package:rituals/features/groups/group_state_provider.dart';
 import 'package:rituals/models/group.dart';
+import 'package:rituals/shared/user_avatar.dart';
 
 class GroupTab extends ConsumerStatefulWidget {
   const GroupTab({super.key, required this.groupId, this.onGroupChanged});
@@ -19,6 +20,7 @@ class GroupTab extends ConsumerStatefulWidget {
 class _GroupTabState extends ConsumerState<GroupTab> {
   Group? _group;
   Map<String, String> _memberNames = {};
+  Map<String, String?> _memberPhotos = {};
   bool _loading = true;
   String? _error;
   final _joinCodeController = TextEditingController();
@@ -34,16 +36,19 @@ class _GroupTabState extends ConsumerState<GroupTab> {
     try {
       final group = await ref.read(groupServiceProvider).getGroup(widget.groupId);
       final names = <String, String>{};
+      final photos = <String, String?>{};
       if (group != null) {
         for (final uid in group.memberIds) {
           final profile = await ref.read(userServiceProvider).getProfile(uid);
           names[uid] = profile?.displayName ?? 'Unknown';
+          photos[uid] = profile?.photoUrl;
         }
       }
       if (mounted) {
         setState(() {
           _group = group;
           _memberNames = names;
+          _memberPhotos = photos;
           _loading = false;
           _error = null;
         });
@@ -106,8 +111,10 @@ class _GroupTabState extends ConsumerState<GroupTab> {
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: ListTile(
-              leading: CircleAvatar(
-                child: Text(user?.displayName?[0].toUpperCase() ?? '?'),
+              leading: UserAvatar(
+                name: user?.displayName ?? '',
+                photoUrl: user?.photoURL,
+                radius: 20,
               ),
               title: Text(user?.displayName ?? 'Unknown'),
               subtitle: Text(user?.email ?? ''),
@@ -160,21 +167,15 @@ class _GroupTabState extends ConsumerState<GroupTab> {
                     final name = _memberNames[uid] ?? uid;
                     final isYou = uid == user?.uid;
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 14,
-                            backgroundColor: theme.colorScheme.primaryContainer,
-                            child: Text(
-                              name[0].toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: theme.colorScheme.onPrimaryContainer,
-                              ),
-                            ),
+                          UserAvatar(
+                            name: name,
+                            photoUrl: _memberPhotos[uid],
+                            radius: 16,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           Text(
                             isYou ? '$name (You)' : name,
                             style: theme.textTheme.bodyMedium,
@@ -288,21 +289,15 @@ class _GroupTabState extends ConsumerState<GroupTab> {
 
           // Actions
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    await ref.read(authServiceProvider).signOut();
-                    if (context.mounted) context.go('/');
-                  },
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Sign Out'),
-                ),
-                const SizedBox(height: 12),
-                TextButton.icon(
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    foregroundColor: Theme.of(context).colorScheme.onError,
+                  ),
                   onPressed: () async {
                     if (user == null) return;
                     final confirm = await showDialog<bool>(
@@ -316,10 +311,15 @@ class _GroupTabState extends ConsumerState<GroupTab> {
                             onPressed: () => Navigator.pop(context, false),
                             child: const Text('Cancel'),
                           ),
-                          TextButton(
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.error,
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.onError,
+                            ),
                             onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Leave',
-                                style: TextStyle(color: Colors.red)),
+                            child: const Text('Leave'),
                           ),
                         ],
                       ),
@@ -333,9 +333,17 @@ class _GroupTabState extends ConsumerState<GroupTab> {
                         .removeGroup(user.uid, widget.groupId);
                     if (context.mounted) context.go('/');
                   },
-                  icon: const Icon(Icons.exit_to_app, color: Colors.red),
-                  label: const Text('Leave Group',
-                      style: TextStyle(color: Colors.red)),
+                  icon: const Icon(Icons.exit_to_app),
+                  label: const Text('Leave Group'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await ref.read(authServiceProvider).signOut();
+                    if (context.mounted) context.go('/');
+                  },
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Sign Out'),
                 ),
               ],
             ),
