@@ -23,6 +23,12 @@ Create shared rituals, daily or weekly habits, and hold each other accountable b
 - **QR invite**: scan to join a group without typing a code
 - **Web support**: runs as a PWA alongside the mobile apps
 
+## Photo storage and peer restore
+
+Photos in Rituals are **temporary proof**, not a permanent archive. The app's purpose is building habits, photos just confirm you did the thing. To this end and my own financial sanity I created a peer to peer storage solution with firebase acting as the temporary relay.
+
+Photos live in Firebase Storage under `relay/` and are cleaned up daily once the bucket nears its limit (oldest first). There's no guarantee a photo URL stays valid forever.
+
 ## Tech stack
 
 | Layer | Technology |
@@ -35,12 +41,6 @@ Create shared rituals, daily or weekly habits, and hold each other accountable b
 | Storage | Firebase Storage |
 | Notifications | Firebase Cloud Messaging |
 | Backend | Cloud Functions (TypeScript) |
-
-## Photo storage and peer restore
-
-Photos in Rituals are **temporary proof**, not a permanent archive. The app's purpose is building habits, photos just confirm you did the thing. To this end and my own financial sanity I created a peer to peer storage solution with firebase acting as the temporary relay.
-
-Photos live in Firebase Storage under `relay/` and are cleaned up daily once the bucket nears its limit (oldest first). There's no guarantee a photo URL stays valid forever.
 
 **What happens when a photo link breaks:**
 
