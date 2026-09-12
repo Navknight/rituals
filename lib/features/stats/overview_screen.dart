@@ -83,7 +83,7 @@ class OverviewScreen extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Text(
                     'Add a ritual and log a few days. Your streaks and '
-                    'consistency show up here.',
+                    'momentum show up here.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -121,7 +121,7 @@ class OverviewScreen extends ConsumerWidget {
             children: [
               StatRow(children: [
                 StatTile(
-                  label: 'Consistency',
+                  label: 'Momentum',
                   value: '${(avgScore * 100).round()}%',
                   icon: LucideIcons.trendingUp,
                 ),
@@ -256,7 +256,6 @@ class _SummaryCard extends StatelessWidget {
               ),
               const SizedBox(height: 7),
               Text(
-                '${(info.score * 100).round()}% consistency  ·  '
                 '${(info.completionRate * 100).round()}% kept  ·  '
                 '${info.totalCompletions} logged',
                 style: theme.textTheme.bodySmall?.copyWith(
