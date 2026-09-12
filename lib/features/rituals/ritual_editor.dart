@@ -672,11 +672,13 @@ class _LogAmountSheet extends StatefulWidget {
 
 class _LogAmountSheetState extends State<_LogAmountSheet> {
   late final TextEditingController _controller;
+  late double _total;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
+    _total = widget.value;
+    _controller = TextEditingController(text: _trim(_total));
   }
 
   @override
@@ -685,22 +687,33 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
     super.dispose();
   }
 
-  List<double> get _quickAmounts {
+  List<double> get _steps {
     return widget.ritual.type == RitualType.timer
-        ? const [5, 10, 15, 30, 60]
+        ? const [5, 10, 15, 30]
         : const [1, 2, 5];
   }
 
-  void _submit(double amount) {
-    Navigator.of(context).pop(amount);
+  void _setTotal(double value) {
+    setState(() {
+      _total = value.clamp(0, widget.target * 10);
+      _controller.text = _trim(_total);
+    });
+  }
+
+  /// Returns the change against what was already logged, so a lower total
+  /// removes progress instead of only ever adding.
+  void _submit() {
+    final typed = double.tryParse(_controller.text);
+    final total = (typed ?? _total).clamp(0.0, widget.target * 10);
+    Navigator.of(context).pop(total - widget.value);
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final remaining = (widget.target - widget.value).clamp(0, double.infinity);
-    final unitLabel = widget.ritual.type == RitualType.timer ? 'min' : widget.ritual.unit;
+    final unitLabel =
+        widget.ritual.type == RitualType.timer ? 'min' : widget.ritual.unit;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -719,47 +732,70 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
               ),
             ),
           ),
-          Text('Log ${widget.ritual.title}', style: textTheme.titleLarge),
+          Text(widget.ritual.title, style: textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(
-            unitLabel.isEmpty
-                ? 'Remaining: ${_trim(remaining.toDouble())}'
-                : 'Remaining: ${_trim(remaining.toDouble())} $unitLabel',
-            style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+            'Target ${_trim(widget.target)}'
+            '${unitLabel.isEmpty ? '' : ' $unitLabel'}'
+            ' \u00b7 logged ${_trim(widget.value)} so far',
+            style: textTheme.bodyMedium
+                ?.copyWith(color: colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              IconButton.filledTonal(
+                onPressed: _total <= 0 ? null : () => _setTotal(_total - 1),
+                icon: const Icon(LucideIcons.minus),
+                tooltip: 'Less',
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: TextField(
+                    controller: _controller,
+                    textAlign: TextAlign.center,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    style: textTheme.headlineSmall,
+                    decoration: InputDecoration(
+                      labelText: 'Total today',
+                      suffixText: unitLabel.isEmpty ? null : unitLabel,
+                    ),
+                  ),
+                ),
+              ),
+              IconButton.filledTonal(
+                onPressed: () => _setTotal(_total + 1),
+                icon: const Icon(LucideIcons.plus),
+                tooltip: 'More',
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _quickAmounts.map((amount) {
-              final label = widget.ritual.type == RitualType.timer
-                  ? '+${_trim(amount)} min'
-                  : '+${_trim(amount)}';
-              return ActionChip(
-                label: Text(label),
-                onPressed: () => _submit(amount),
-              );
-            }).toList(),
+            children: [
+              for (final step in _steps)
+                ActionChip(
+                  label: Text('+${_trim(step)}'),
+                  onPressed: () => _setTotal(
+                    (double.tryParse(_controller.text) ?? _total) + step,
+                  ),
+                ),
+              ActionChip(
+                label: const Text('Clear'),
+                onPressed: () => _setTotal(0),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            autofocus: true,
-            decoration: InputDecoration(
-              labelText: 'Amount',
-              suffixText: unitLabel.isEmpty ? null : unitLabel,
-            ),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           FilledButton(
-            onPressed: () {
-              final amount = double.tryParse(_controller.text);
-              if (amount == null || amount <= 0) return;
-              _submit(amount);
-            },
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-            child: const Text('Log'),
+            onPressed: _submit,
+            style:
+                FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            child: const Text('Save'),
           ),
         ],
       ),

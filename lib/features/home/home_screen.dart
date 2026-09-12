@@ -50,6 +50,14 @@ class HomeScreen extends ConsumerWidget {
         onRetry: () => ref.invalidate(ritualsProvider(groupId)),
       ),
       data: (allRituals) {
+        // Never treat a failed entries stream as "nothing logged": that shows
+        // every ritual as undone and silently disagrees with other screens.
+        if (entriesAsync.hasError) {
+          return _ErrorState(
+            message: '${entriesAsync.error}',
+            onRetry: () => ref.invalidate(todayEntriesProvider(groupId)),
+          );
+        }
         final entries = entriesAsync.value ?? const {};
         final today = DateTime.now();
 
@@ -183,6 +191,7 @@ class HomeScreen extends ConsumerWidget {
           onToggle: () => _toggle(context, ref, ritual, progress),
           onSkip: () => _skip(context, ref, ritual, progress),
           onAdd: () => _add(context, ref, ritual, progress),
+          onAdjust: () => _adjust(context, ref, ritual, progress),
           onOpen: () => Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => RitualDetailScreen(
@@ -329,6 +338,31 @@ class HomeScreen extends ConsumerWidget {
             : _remark(ref, Moment.skipped, ritual: ritual) ??
                 'Skipped ${ritual.title}. Streak held.',
       );
+    }
+  }
+
+  /// Sets today's total, which is the only way to take progress back off.
+  Future<void> _adjust(
+    BuildContext context,
+    WidgetRef ref,
+    Ritual ritual,
+    DayProgress progress,
+  ) async {
+    final controller = ref.read(ritualControllerProvider);
+    if (!controller.ready) return;
+
+    final delta = await showLogAmountSheet(context, ritual, progress);
+    if (delta == null || delta == 0) return;
+    if (!context.mounted) return;
+
+    await controller.addProgress(
+      groupId: groupId,
+      ritual: ritual,
+      current: progress,
+      amount: delta,
+    );
+    if (context.mounted) {
+      _undoBar(context, ref, ritual, progress, 'Updated ${ritual.title}');
     }
   }
 

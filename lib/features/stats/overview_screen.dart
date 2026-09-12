@@ -20,6 +20,15 @@ final spaceSummaryProvider =
   final ritualsAsync = ref.watch(ritualsProvider(groupId));
   final entriesAsync = ref.watch(spaceEntriesProvider(groupId));
 
+  // Surface a broken entries stream rather than reporting zeros, which reads
+  // as "you never did this" and contradicts the Today screen.
+  if (entriesAsync.hasError) {
+    return AsyncValue<List<RitualSummary>>.error(
+      entriesAsync.error!,
+      entriesAsync.stackTrace ?? StackTrace.current,
+    );
+  }
+
   return ritualsAsync.whenData((rituals) {
     final byRitual = entriesAsync.value ?? const <String, List<RitualEntry>>{};
     final streaks = ref.watch(streakServiceProvider);

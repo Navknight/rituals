@@ -20,6 +20,7 @@ class RitualTile extends StatelessWidget {
     required this.onSkip,
     required this.onOpen,
     required this.onAdd,
+    required this.onAdjust,
     this.trailing,
   });
 
@@ -32,6 +33,9 @@ class RitualTile extends StatelessWidget {
 
   /// Adds one unit to a quantity ritual, or opens the timer sheet.
   final VoidCallback onAdd;
+
+  /// Opens the sheet that sets today's total, so progress can go down too.
+  final VoidCallback onAdjust;
 
   final Widget? trailing;
 
@@ -120,18 +124,27 @@ class RitualTile extends StatelessWidget {
                   const SizedBox(width: 8),
                   trailing!,
                 ],
-                if (ritual.type != RitualType.check && !done && !skipped)
-                  IconButton(
-                    onPressed: onAdd,
-                    icon: Icon(
-                      ritual.type == RitualType.timer
-                          ? LucideIcons.timer
-                          : LucideIcons.plus,
+                if (ritual.type != RitualType.check && !skipped)
+                  // Long press corrects the running total. Without it a count
+                  // ritual could only ever go up.
+                  GestureDetector(
+                    onLongPress: onAdjust,
+                    child: IconButton(
+                      onPressed: done ? onAdjust : onAdd,
+                      icon: Icon(
+                        done
+                            ? LucideIcons.pencil
+                            : ritual.type == RitualType.timer
+                                ? LucideIcons.timer
+                                : LucideIcons.plus,
+                      ),
+                      tooltip: done
+                          ? 'Edit amount'
+                          : ritual.type == RitualType.timer
+                              ? 'Start timer'
+                              : 'Add one, hold to edit',
+                      style: IconButton.styleFrom(foregroundColor: accent),
                     ),
-                    tooltip: ritual.type == RitualType.timer
-                        ? 'Log minutes'
-                        : 'Add one',
-                    style: IconButton.styleFrom(foregroundColor: accent),
                   ),
               ],
             ),
