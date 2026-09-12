@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:rituals/features/camera/pending_capture.dart';
 import 'package:rituals/features/camera/preview_screen.dart';
 
 /// Hands capture to the system camera app rather than driving the sensor in
@@ -46,6 +47,15 @@ class _CameraScreenState extends State<CameraScreen> {
       _opening = true;
       _error = null;
     });
+
+    // Android may kill this app while the camera app is in front. Leave a note
+    // so the next run can pick the photo back up.
+    await PendingCapture(
+      groupId: widget.groupId,
+      ritualId: widget.ritualId,
+      completionValue: widget.completionValue,
+    ).remember();
+
     try {
       final picked = await _picker.pickImage(
         source: source,
@@ -54,6 +64,7 @@ class _CameraScreenState extends State<CameraScreen> {
         maxWidth: 2048,
         imageQuality: 92,
       );
+      await PendingCapture.forget();
       if (!mounted) return;
 
       if (picked == null) {
@@ -73,6 +84,7 @@ class _CameraScreenState extends State<CameraScreen> {
         ),
       );
     } catch (e) {
+      await PendingCapture.forget();
       if (mounted) {
         setState(() {
           _opening = false;

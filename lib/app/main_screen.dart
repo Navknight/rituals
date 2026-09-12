@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/core/providers.dart';
+import 'package:rituals/features/camera/pending_capture.dart';
+import 'package:rituals/features/camera/preview_screen.dart';
 import 'package:rituals/features/home/home_screen.dart';
 import 'package:rituals/features/rituals/ritual_editor.dart';
 import 'package:rituals/features/settings/settings_screen.dart';
@@ -46,6 +48,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   }
 
   Future<void> _bootstrap() async {
+    await _resumeLostCapture();
+
     unawaited(ref.read(ritualServiceProvider).migrateLegacyEntries(widget.groupId));
 
     final needs = await NotificationService().needsWebPermissionPrompt();
@@ -60,6 +64,26 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) RestoreService().processPendingRequests([widget.groupId]);
     });
+  }
+
+  /// Picks up a photo taken just before Android killed the app, which would
+  /// otherwise be dropped and leave the user back on Today wondering what
+  /// happened to it.
+  Future<void> _resumeLostCapture() async {
+    final lost = await PendingCapture.claim();
+    if (lost == null || !mounted || !context.mounted) return;
+
+    final (pending, path) = lost;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PreviewScreen(
+          photoPath: path,
+          groupId: pending.groupId,
+          ritualId: pending.ritualId,
+          completionValue: pending.completionValue,
+        ),
+      ),
+    );
   }
 
   Future<void> _openFromNotification(Map<String, dynamic> data) async {

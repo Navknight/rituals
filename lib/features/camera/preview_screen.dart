@@ -194,8 +194,10 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
       await _refreshWidget(uid, caption);
 
       if (mounted && context.mounted) {
-        var count = 0;
-        Navigator.of(context).popUntil((_) => count++ >= 2);
+        // The preview stands in the camera's place on the stack, so one pop
+        // lands back on the screen that asked for the photo. Counting pops
+        // here took the caller down with it.
+        Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
