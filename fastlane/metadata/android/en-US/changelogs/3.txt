@@ -1,0 +1,11 @@
+0.1.2
+
+A fix for photos going missing between the camera and the app.
+
+- A photo taken could vanish on the way back from the camera. Android is
+  free to kill the app while the system camera app is in front, and always
+  does with "don't keep activities" turned on. The app came back on an empty
+  screen and the photo landed nowhere. It is now remembered and claimed on
+  the way back.
+- Saving a photo closed one screen too many, taking the ritual that asked
+  for the photo down with the preview.
