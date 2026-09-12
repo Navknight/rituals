@@ -1,0 +1,20 @@
+0.1.1
+
+Fixes from the first real device testing.
+
+- Opening a ritual sat on a spinner forever. The security rules for the new
+  entries collection had never been deployed, so every read was denied and
+  the app retried silently instead of saying so.
+- Saving a photo failed with an authorisation error, for the same reason.
+- Today and Progress could disagree about the same ritual, because a failed
+  entries stream was drawn as "nothing logged" rather than as an error.
+- Photos now come from the system camera app, so they get the phone's own
+  processing instead of raw sensor output.
+- Logged amounts can go down again. The sheet edits today's total, with
+  plus, minus, quick steps and clear. Hold the plus button to open it.
+- Timer rituals can be run in the app rather than timed elsewhere.
+- Switching spaces had no effect on what was shown.
+- The notification banner stayed after permission was granted.
+- A solo log no longer calls itself sharing.
+- Photos are kept on the device that took them, so a web user keeps their
+  history even after the relay is pruned.

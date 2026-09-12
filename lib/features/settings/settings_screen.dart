@@ -186,7 +186,7 @@ class SettingsScreen extends ConsumerWidget {
             title: Text('Rituals'),
             subtitle: Text('Track the habits you care about, alone or together.'),
           ),
-          const ListTile(title: Text('Version'), subtitle: Text('0.1.0')),
+          const ListTile(title: Text('Version'), subtitle: Text('0.1.1')),
         ],
       ),
     );
