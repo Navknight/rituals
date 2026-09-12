@@ -13,7 +13,7 @@ const db = getFirestore();
 const messaging = getMessaging();
 
 export const onEntryCreated = onDocumentCreated(
-  "groups/{groupId}/rituals/{ritualId}/entries/{entryId}",
+  "groups/{groupId}/entries/{entryId}",
   async (event) => {
     const snap = event.data;
     if (!snap) return;
@@ -21,13 +21,19 @@ export const onEntryCreated = onDocumentCreated(
     const entryData = snap.data();
     const {groupId} = event.params;
     const posterId = entryData.userId;
+    const ritualId = entryData.ritualId ?? "";
 
-    // Get the group to find all members
+    // Only photos are worth interrupting anyone for.
+    if (!entryData.photoUrl) return;
+
     const groupDoc = await db.collection("groups").doc(groupId).get();
     if (!groupDoc.exists) return;
 
     const group = groupDoc.data();
     if (!group) return;
+
+    // Nobody to notify in a space of one.
+    if (group.isPersonal === true) return;
 
     // Get FCM tokens for all members except the poster
     const memberIds: string[] = group.memberIds.filter(
@@ -62,7 +68,7 @@ export const onEntryCreated = onDocumentCreated(
       },
       data: {
         groupId,
-        ritualId: event.params.ritualId,
+        ritualId,
         entryId: event.params.entryId,
         photoUrl: entryData.photoUrl ?? "",
       },
@@ -123,38 +129,105 @@ export const onNudgeCreated = onDocumentCreated(
   }
 );
 
-// Runs every hour — sends reminder notifications for rituals whose reminderTime
-// matches the current UTC hour on a scheduled day.
-export const sendDailyReminders = onSchedule("every 60 minutes", async () => {
-  const now = new Date();
-  const hour = now.getUTCHours().toString().padStart(2, "0");
-  const minute = now.getUTCMinutes().toString().padStart(2, "0");
-  const currentTime = `${hour}:${minute}`;
+function dayKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, "0");
+  const d = date.getDate().toString().padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
-  // JS getDay(): 0=Sun..6=Sat → Dart weekday: 1=Mon..7=Sun
-  const jsDay = now.getUTCDay();
-  const dartWeekday = jsDay === 0 ? 7 : jsDay;
+function isDueOn(ritual: FirebaseFirestore.DocumentData, local: Date): boolean {
+  const weekday = local.getDay() === 0 ? 7 : local.getDay();
+  const scheduleType = ritual.scheduleType ?? "weekdays";
+
+  if (scheduleType === "timesPerWeek") return true;
+
+  if (scheduleType === "everyNDays") {
+    const interval: number = ritual.intervalDays ?? 1;
+    if (interval < 1) return true;
+    const createdAt = ritual.createdAt?.toDate?.();
+    if (!createdAt) return true;
+    const start = Date.UTC(
+      createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate()
+    );
+    const today = Date.UTC(
+      local.getFullYear(), local.getMonth(), local.getDate()
+    );
+    const elapsed = Math.round((today - start) / 86400000);
+    return elapsed >= 0 && elapsed % interval === 0;
+  }
+
+  const scheduleDays: number[] = ritual.scheduleDays ?? [];
+  return scheduleDays.includes(weekday);
+}
+
+// Runs every 15 minutes. A ritual's reminderTime is local, so it is shifted by
+// the offset stored with it to decide whether it is due right now.
+export const sendDailyReminders = onSchedule("every 15 minutes", async () => {
+  const now = new Date();
 
   const groupsSnapshot = await db.collection("groups").get();
 
   for (const groupDoc of groupsSnapshot.docs) {
     const groupId = groupDoc.id;
     const memberIds: string[] = groupDoc.data().memberIds ?? [];
+    if (memberIds.length === 0) continue;
 
     const ritualsSnapshot = await db
       .collection("groups")
       .doc(groupId)
       .collection("rituals")
-      .where("reminderTime", "==", currentTime)
+      .where("reminderTime", "!=", null)
       .get();
 
     for (const ritualDoc of ritualsSnapshot.docs) {
       const ritual = ritualDoc.data();
-      const scheduleDays: number[] = ritual.scheduleDays ?? [];
-      if (!scheduleDays.includes(dartWeekday)) continue;
+      if (ritual.archived === true) continue;
+
+      const reminderTime: string | undefined = ritual.reminderTime;
+      if (!reminderTime) continue;
+
+      const offsetMinutes: number = ritual.reminderOffsetMinutes ?? 0;
+      const local = new Date(now.getTime() + offsetMinutes * 60000);
+
+      const [hourPart, minutePart] = reminderTime.split(":");
+      const targetMinutes =
+        parseInt(hourPart, 10) * 60 + parseInt(minutePart, 10);
+      const localMinutes = local.getUTCHours() * 60 + local.getUTCMinutes();
+
+      // The schedule runs every 15 minutes, so fire once inside that window.
+      const delta = localMinutes - targetMinutes;
+      if (delta < 0 || delta >= 15) continue;
+
+      const localDay = new Date(local.getTime());
+      if (!isDueOn(ritual, new Date(
+        localDay.getUTCFullYear(),
+        localDay.getUTCMonth(),
+        localDay.getUTCDate()
+      ))) continue;
+
+      const today = dayKey(new Date(
+        localDay.getUTCFullYear(),
+        localDay.getUTCMonth(),
+        localDay.getUTCDate()
+      ));
+
+      // Skip anyone who already logged it today.
+      const loggedSnapshot = await db
+        .collection("groups")
+        .doc(groupId)
+        .collection("entries")
+        .where("ritualId", "==", ritualDoc.id)
+        .where("day", "==", today)
+        .get();
+
+      const alreadyLogged = new Set(
+        loggedSnapshot.docs.map((doc) => doc.data().userId as string)
+      );
 
       const tokens: string[] = [];
       for (const uid of memberIds) {
+        if (alreadyLogged.has(uid)) continue;
         const userDoc = await db.collection("users").doc(uid).get();
         const token = userDoc.data()?.fcmToken;
         if (token) tokens.push(token);
@@ -164,14 +237,14 @@ export const sendDailyReminders = onSchedule("every 60 minutes", async () => {
       await messaging.sendEachForMulticast({
         tokens,
         notification: {
-          title: `${ritual.emoji as string} Time for ${ritual.title as string}!`,
-          body: "Don't forget your ritual today",
+          title: `${ritual.emoji as string} ${ritual.title as string}`,
+          body: "Time for this one.",
         },
         data: {groupId, ritualId: ritualDoc.id, type: "reminder"},
       });
 
       console.log(
-        `Reminder sent for ${ritual.title as string} in group ${groupId}`
+        `Reminder sent for ${ritual.title as string} in ${groupId}`
       );
     }
   }

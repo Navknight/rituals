@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:rituals/services/user_service.dart';
 import 'package:rituals/services/widget_service.dart';
-import 'package:go_router/go_router.dart';
 
 class NotificationService {
   final _messaging = FirebaseMessaging.instance;
@@ -112,24 +111,6 @@ class NotificationService {
       // Show local notification on Android (foreground messages don't show automatically)
       if (!kIsWeb) {
         _showLocalNotification(message);
-      }
-    });
-  }
-
-  void setupNotificationTapHandler(GoRouter router) {
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      final groupId = message.data['groupId'];
-      if (groupId != null) {
-        router.go('/home/$groupId');
-      }
-    });
-
-    _messaging.getInitialMessage().then((message) {
-      if (message != null) {
-        final groupId = message.data['groupId'];
-        if (groupId != null) {
-          router.go('/home/$groupId');
-        }
       }
     });
   }

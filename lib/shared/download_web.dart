@@ -1,11 +1,13 @@
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'dart:js_interop';
+
+import 'package:web/web.dart' as web;
 
 Future<void> downloadImageWeb(String url, String filename) async {
-  final anchor = html.AnchorElement(href: url)
-    ..setAttribute('download', filename)
+  final anchor = web.document.createElement('a') as web.HTMLAnchorElement
+    ..href = url
+    ..download = filename
     ..style.display = 'none';
-  html.document.body?.children.add(anchor);
+  web.document.body?.append(anchor as JSAny);
   anchor.click();
   anchor.remove();
 }

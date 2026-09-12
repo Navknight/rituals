@@ -1,60 +1,158 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rituals/features/auth/auth_provider.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:rituals/services/auth_service.dart';
 import 'package:rituals/shared/web_wrapper.dart' as web;
 
-class SignInScreen extends ConsumerWidget {
+final authServiceProvider = Provider<AuthService>((ref) => AuthService());
+
+class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SignInScreen> createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends ConsumerState<SignInScreen> {
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function() action) async {
+    setState(() => _busy = true);
+    try {
+      await action();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_readableError(e))),
+        );
+      }
+    }
+  }
+
+  String _readableError(Object error) {
+    final text = error.toString();
+    if (text.contains('operation-not-allowed')) {
+      return 'Guest sign-in is turned off for this Firebase project. '
+          'Enable Anonymous auth in the Firebase console.';
+    }
+    return 'Could not sign in: $text';
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.camera_alt_rounded,
-                    size: 80,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Rituals',
-                    style: theme.textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                    child: Icon(
+                      LucideIcons.flame,
+                      size: 44,
+                      color: theme.colorScheme.onPrimaryContainer,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 28),
                   Text(
-                    'Share daily moments with your people',
+                    'Rituals',
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Track the habits you care about. On your own, or with '
+                    'people who will notice when you stop.',
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 48),
-                  if (kIsWeb)
-                    web.renderButton()
-                  else
+                  const SizedBox(height: 40),
+                  if (_busy)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: CircularProgressIndicator(),
+                    )
+                  else ...[
                     SizedBox(
                       width: double.infinity,
-                      height: 48,
+                      height: 52,
                       child: FilledButton.icon(
-                        onPressed: () {
-                          ref.read(authServiceProvider).signInWithGoogle();
-                        },
-                        icon: const Icon(Icons.login),
-                        label: const Text('Sign in with Google'),
+                        onPressed: () => _run(
+                          () => ref.read(authServiceProvider).signInAsGuest(),
+                        ),
+                        icon: const Icon(LucideIcons.zap, size: 20),
+                        label: const Text('Start tracking'),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'No account needed. You can add one later and keep '
+                      'everything.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          child: Text(
+                            'or',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    if (kIsWeb)
+                      web.renderButton()
+                    else
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _run(
+                            () => ref
+                                .read(authServiceProvider)
+                                .signInWithGoogle(),
+                          ),
+                          icon: const Icon(LucideIcons.logIn, size: 20),
+                          label: const Text('Continue with Google'),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Sign in with Google to sync across devices and join '
+                      'shared spaces.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ],
               ),
             ),

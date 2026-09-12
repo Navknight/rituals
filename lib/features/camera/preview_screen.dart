@@ -4,20 +4,21 @@ import 'package:camera/camera.dart' show XFile;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rituals/features/auth/auth_provider.dart';
+import 'package:rituals/core/providers.dart';
 import 'package:rituals/features/camera/camera_provider.dart';
-import 'package:rituals/models/ritual_entry.dart';
 
 class PreviewScreen extends ConsumerStatefulWidget {
   final String photoPath;
   final String groupId;
   final String ritualId;
+  final double completionValue;
 
   const PreviewScreen({
     super.key,
     required this.photoPath,
     required this.groupId,
     required this.ritualId,
+    this.completionValue = 1,
   });
 
   @override
@@ -115,8 +116,8 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      final user = ref.read(authStateProvider).value;
-      if (user == null) return;
+      final uid = ref.read(currentUidProvider);
+      if (uid == null) return;
 
       final rawBytes = kIsWeb
           ? await XFile(widget.photoPath).readAsBytes()
@@ -130,23 +131,19 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
         widget.ritualId,
       );
 
-      final entry = RitualEntry(
-        id: '',
-        userId: user.uid,
-        photoUrl: url,
-        createdAt: DateTime.now(),
-        caption:
-            captionController.text.isEmpty ? null : captionController.text,
-        localPath: result.localPath,
-      );
+      final caption = captionController.text.trim();
+      await ref.read(ritualServiceProvider).logEntry(
+            groupId: widget.groupId,
+            ritualId: widget.ritualId,
+            userId: uid,
+            day: DateTime.now(),
+            value: widget.completionValue,
+            photoUrl: url,
+            localPath: result.localPath,
+            caption: caption.isEmpty ? null : caption,
+          );
 
-      await photoService.createEntry(
-        widget.groupId,
-        widget.ritualId,
-        entry,
-      );
-
-      if (context.mounted) {
+      if (mounted && context.mounted) {
         var count = 0;
         Navigator.of(context).popUntil((_) => count++ >= 2);
       }
