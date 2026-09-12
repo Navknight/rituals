@@ -1,0 +1,63 @@
+Rituals is a habit tracker for people who want proof, not just a checkmark.
+
+A day does not count until a photo is attached. That is the core rule: a tick
+box is easy to lie to, a photo is not. Tap a ritual and the camera opens
+instead of a checkbox. Photo proof is on by default for every new ritual, and
+can be turned off per ritual for the handful of habits a photo cannot capture.
+
+No account is required. Tap "Start tracking" and you are in, with a private
+personal space created for you automatically. It holds your rituals, has one
+member, and never shows invites, members or nudges. Connect a Google account
+later from Settings and everything carries over, since the guest account is
+upgraded in place rather than replaced.
+
+Three kinds of ritual:
+- Check: a single tap marks it done, for example making the bed
+- Count: a daily target and unit, for example 8 glasses of water
+- Timer: a daily target in minutes, for example 20 minutes of reading
+
+Count and timer rituals accumulate through the day and show partial progress
+in the ring.
+
+Three kinds of schedule:
+- Fixed weekdays, for example Monday, Wednesday, Friday
+- A weekly quota, for example 3 times per week on any days you like
+- Every N days, counting from the day the ritual was created
+
+Skips, not misses. Swipe a ritual to skip a day. A skipped day is a
+deliberate rest day: it holds your streak without extending it, and stays out
+of your completion rate entirely. Rest days from the schedule work the same
+way, so a Monday-only ritual does not lose its streak on Tuesday.
+
+Habit score. Streaks are brittle, since one bad day erases months of
+progress. Alongside the streak, every ritual has a score from 0 to 100%, an
+exponential moving average that rewards consistency over perfection: keep a
+daily ritual perfectly and the score reaches about 80% after a month and 96%
+after two, while a missed day makes it dip rather than reset. The formula
+accounts for each ritual's own schedule, so a three-times-a-week habit is not
+judged against a daily one.
+
+Stats and charts. Every ritual tracks its current and best streak, completion
+rate over days it was due, total times logged, and a per-weekday breakdown
+showing which day you actually keep it. Charts include a GitHub-style
+heatmap of the last six months, a score trend line, a weekday bar chart, and a
+month calendar, plus a Progress tab that rolls everything up across a space,
+including perfect days in the last 30.
+
+Optional shared spaces. Everything above works entirely alone. If you want
+company, create a shared space from Settings and invite people by a
+6-character code or QR scan. A shared space adds everyone's progress on a
+ritual for today, nudges (a push notification to someone who has not logged
+yet), and shared photo history. Personal spaces hide all of this.
+
+Commentary with an attitude. The app has opinions about your progress, and
+you choose how blunt they get. The tone setting runs from Off through Kind
+and Dry to Brutal, with a separate swearing toggle that only appears on
+Brutal and stays off until you turn it on. All lines are hand-written and
+picked entirely on device: no model, no network call, and nothing the app
+can say that isn't in its own source. Commentary shows up under the day
+header, on the snackbar after logging, and on a ritual's detail screen when
+there is something worth noting, such as a broken streak or a score worth
+celebrating.
+
+Rituals is free and open source software, built with Flutter.
