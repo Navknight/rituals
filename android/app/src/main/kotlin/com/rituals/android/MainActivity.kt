@@ -1,4 +1,4 @@
-package com.example.rituals
+package com.rituals.android
 
 import io.flutter.embedding.android.FlutterActivity
 

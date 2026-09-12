@@ -7,7 +7,7 @@ import 'package:home_widget/home_widget.dart';
 /// no-op there as well as on web.
 class WidgetService {
   static const _androidWidgetName = 'RitualWidgetProvider';
-  static const _appGroupId = 'group.com.example.rituals';
+  static const _appGroupId = 'group.com.rituals.android';
 
   static bool get _supported => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 

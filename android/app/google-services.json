@@ -7,18 +7,18 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:637686614153:android:70cad962d152a471361e58",
+        "mobilesdk_app_id": "1:637686614153:android:0a719ef1161a4031361e58",
         "android_client_info": {
-          "package_name": "com.example.rituals"
+          "package_name": "com.rituals.android"
         }
       },
       "oauth_client": [
         {
-          "client_id": "637686614153-u7artuic4otp6ne59j2ilt3jb25jud1v.apps.googleusercontent.com",
+          "client_id": "637686614153-lfo6p61cm9ra61sgmvb8jk0b2rvagvcm.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.rituals",
-            "certificate_hash": "f255bb1ebd9e61dc193c504690d3f679eda1538a"
+            "package_name": "com.rituals.android",
+            "certificate_hash": "1d5a8cf66d40007b7b809ccd9f091818c3db567f"
           }
         },
         {

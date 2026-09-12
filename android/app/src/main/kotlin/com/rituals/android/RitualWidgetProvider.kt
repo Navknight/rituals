@@ -1,4 +1,4 @@
-package com.example.rituals
+package com.rituals.android
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
