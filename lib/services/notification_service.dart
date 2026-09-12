@@ -50,7 +50,13 @@ class NotificationService {
     );
     final granted = settings.authorizationStatus == AuthorizationStatus.authorized;
     if (granted) {
-      await _saveToken(uid);
+      try {
+        await _saveToken(uid);
+      } catch (e) {
+        // getToken can fail on an iOS PWA before the service worker is ready.
+        // Permission was still granted, so do not report failure.
+        debugPrint('[NotificationService] token save failed: $e');
+      }
     }
     return granted;
   }

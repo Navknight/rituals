@@ -52,6 +52,23 @@ class ActiveSpaceController extends Notifier<String?> {
 final activeSpaceProvider =
     NotifierProvider<ActiveSpaceController, String?>(ActiveSpaceController.new);
 
+/// The space to show: the current selection when it is still valid, otherwise
+/// the personal space.
+///
+/// This has to watch the selection rather than the controller. Watching
+/// `activeSpaceProvider.notifier` returns the same instance forever, so
+/// picking a different space changed the state without rebuilding anything.
+final resolvedSpaceProvider = Provider<String?>((ref) {
+  final profile = ref.watch(profileProvider).value;
+  if (profile == null) return null;
+
+  final selected = ref.watch(activeSpaceProvider);
+  if (selected != null && profile.groupIds.contains(selected)) return selected;
+
+  return profile.personalGroupId ??
+      (profile.groupIds.isEmpty ? null : profile.groupIds.first);
+});
+
 final groupProvider = StreamProvider.family<Group?, String>(
   (ref, groupId) => ref.watch(groupServiceProvider).watchGroup(groupId),
 );

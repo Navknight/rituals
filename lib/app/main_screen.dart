@@ -93,8 +93,14 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   Future<void> _enableNotifications() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    final granted = await NotificationService().requestWebPermission(uid);
+    var granted = false;
+    try {
+      granted = await NotificationService().requestWebPermission(uid);
+    } catch (e) {
+      debugPrint('[MainScreen] notification permission failed: $e');
+    }
     if (!mounted) return;
+    // Dismiss regardless: the banner must never outlive the prompt.
     setState(() => _notifBanner = false);
     if (!granted) {
       ScaffoldMessenger.of(context).showSnackBar(

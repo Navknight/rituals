@@ -89,8 +89,7 @@ class _SpaceGateState extends ConsumerState<_SpaceGate> {
           data: (profile) {
             if (profile == null) return const _Splash();
 
-            final groupId =
-                ref.watch(activeSpaceProvider.notifier).resolve(profile);
+            final groupId = ref.watch(resolvedSpaceProvider);
             if (groupId == null) return const _Splash();
 
             return MainScreen(key: ValueKey(groupId), groupId: groupId);

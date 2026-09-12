@@ -13,6 +13,7 @@ import 'package:rituals/features/stats/stat_widgets.dart';
 import 'package:rituals/models/ritual.dart';
 import 'package:rituals/models/ritual_entry.dart';
 import 'package:rituals/models/user_profiles.dart';
+import 'package:rituals/shared/entry_photo.dart';
 import 'package:rituals/shared/user_avatar.dart';
 import 'package:rituals/services/streak_service.dart';
 
@@ -620,30 +621,10 @@ class _PhotosStrip extends ConsumerWidget {
             onTap: () => _openPhoto(context, ref, entry),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                entry.photoUrl!,
+              child: EntryPhoto(
+                entry: entry,
                 width: 96,
                 height: 96,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return const SizedBox(
-                    width: 96,
-                    height: 96,
-                    child: Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stack) => Container(
-                  width: 96,
-                  height: 96,
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    LucideIcons.imageOff,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
               ),
             ),
           );
@@ -666,17 +647,7 @@ class _PhotosStrip extends ConsumerWidget {
               children: [
                 Flexible(
                   child: InteractiveViewer(
-                    child: Image.network(
-                      entry.photoUrl!,
-                      errorBuilder: (context, error, stack) => Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Icon(
-                          LucideIcons.imageOff,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
+                    child: EntryPhoto(entry: entry, fit: BoxFit.contain),
                   ),
                 ),
                 Padding(

@@ -77,6 +77,8 @@ void main() async {
       await FirebaseAuth.instance.useAuthEmulator(_emulatorHost, 9099);
       await FirebaseStorage.instance.useStorageEmulator(_emulatorHost, 9199);
     } else {
+      // Offline persistence is mobile only. Forcing it on with an unlimited
+      // cache on web left query listeners never emitting a first snapshot.
       FirebaseFirestore.instance.settings = const Settings(
         persistenceEnabled: true,
         cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,

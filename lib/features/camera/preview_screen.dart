@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rituals/core/providers.dart';
+import 'package:rituals/services/local_photo_store.dart';
 import 'package:rituals/services/widget_service.dart';
 import 'package:rituals/features/camera/camera_provider.dart';
 
@@ -167,7 +168,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
       );
 
       final caption = captionController.text.trim();
-      await ref.read(ritualServiceProvider).logEntry(
+      final entry = await ref.read(ritualServiceProvider).logEntry(
             groupId: widget.groupId,
             ritualId: widget.ritualId,
             userId: uid,
@@ -177,6 +178,10 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
             localPath: result.localPath,
             caption: caption.isEmpty ? null : caption,
           );
+
+      // The relay is pruned, so keep the only durable copy on this device.
+      // On web this is the only copy there is.
+      await LocalPhotoStore.instance.put(entry.id, result.bytes);
 
       await _refreshWidget(uid, caption);
 
