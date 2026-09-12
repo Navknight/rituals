@@ -5,6 +5,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/app/theme.dart';
 import 'package:rituals/core/providers.dart';
 import 'package:rituals/core/settings_provider.dart';
+import 'package:rituals/features/commentary/commentary.dart';
+import 'package:rituals/features/commentary/tone.dart';
 import 'package:rituals/features/auth/sign_in_screen.dart';
 import 'package:rituals/features/spaces/spaces_screen.dart';
 import 'package:rituals/shared/user_avatar.dart';
@@ -121,6 +123,52 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: (value) =>
                 ref.read(settingsProvider.notifier).setCelebrate(value),
           ),
+          const Divider(height: 32),
+          _SectionHeader('Commentary'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Text(
+              'How the app talks to you about your habits.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+          RadioGroup<CommentaryTone>(
+            groupValue: settings.tone,
+            onChanged: (value) {
+              if (value != null) {
+                ref.read(settingsProvider.notifier).setTone(value);
+              }
+            },
+            child: Column(
+              children: [
+                for (final tone in CommentaryTone.values)
+                  RadioListTile<CommentaryTone>(
+                    value: tone,
+                    title: Text(tone.label),
+                    subtitle: Text(tone.description),
+                  ),
+              ],
+            ),
+          ),
+          if (settings.tone == CommentaryTone.brutal)
+            SwitchListTile(
+              title: const Text('Allow swearing'),
+              subtitle: const Text('Off by default. Your call.'),
+              value: settings.allowProfanity,
+              onChanged: (value) =>
+                  ref.read(settingsProvider.notifier).setAllowProfanity(value),
+            ),
+          if (settings.tone != CommentaryTone.off)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: _TonePreview(
+                tone: settings.tone,
+                allowProfanity: settings.allowProfanity,
+              ),
+            ),
           const Divider(height: 32),
           _SectionHeader('Spaces'),
           ListTile(
@@ -278,6 +326,50 @@ class _GuestUpgradeCard extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+/// Shows a real line in the chosen tone so the setting is not a guess.
+class _TonePreview extends ConsumerWidget {
+  const _TonePreview({required this.tone, required this.allowProfanity});
+
+  final CommentaryTone tone;
+  final bool allowProfanity;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final line = Commentary().lineFor(
+      Moment.dayEmpty,
+      tone: tone,
+      allowProfanity: allowProfanity,
+      context: const CommentaryContext(dueToday: 3),
+    );
+    if (line == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(LucideIcons.quote, size: 15,
+              color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              line,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(fontStyle: FontStyle.italic),
+            ),
+          ),
+        ],
       ),
     );
   }

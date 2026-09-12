@@ -8,6 +8,10 @@ class RitualEntry {
   final String id;
   final String userId;
 
+  /// The ritual this log belongs to. Denormalised so a whole space can be read
+  /// from one collection.
+  final String ritualId;
+
   /// Local calendar day as `yyyy-MM-dd`. Grouping on this rather than on
   /// [createdAt] keeps a late-night entry on the day the user meant.
   final String day;
@@ -27,6 +31,7 @@ class RitualEntry {
   RitualEntry({
     required this.id,
     required this.userId,
+    this.ritualId = '',
     required this.day,
     this.value = 1,
     this.skipped = false,
@@ -50,6 +55,7 @@ class RitualEntry {
     return RitualEntry(
       id: id,
       userId: userId,
+      ritualId: ritualId,
       day: day,
       value: value ?? this.value,
       skipped: skipped ?? this.skipped,
@@ -83,6 +89,7 @@ class RitualEntry {
     return RitualEntry(
       id: map['id'] as String? ?? '',
       userId: map['userId'] as String? ?? '',
+      ritualId: map['ritualId'] as String? ?? '',
       // Entries written before day keys existed fall back to their timestamp.
       day: map['day'] as String? ?? dayKey(createdAt),
       value: (map['value'] as num?)?.toDouble() ?? 1,
@@ -98,6 +105,7 @@ class RitualEntry {
     return {
       'id': id,
       'userId': userId,
+      'ritualId': ritualId,
       'day': day,
       'value': value,
       'skipped': skipped,

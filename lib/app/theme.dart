@@ -39,6 +39,14 @@ ThemeData buildTheme(AccentColor accent, Brightness brightness) {
     chipRadius: Corners.control,
     snackBarRadius: Corners.control,
     cardElevation: 0,
+    // Keep every selected control in the accent family. Some Flex schemes
+    // pair a green primary with an unrelated secondary, which reads as a bug.
+    segmentedButtonSchemeColor: SchemeColor.primary,
+    segmentedButtonSelectedForegroundSchemeColor: SchemeColor.onPrimary,
+    chipSelectedSchemeColor: SchemeColor.primaryContainer,
+    navigationBarIndicatorSchemeColor: SchemeColor.primaryContainer,
+    navigationBarSelectedIconSchemeColor: SchemeColor.onPrimaryContainer,
+    navigationBarSelectedLabelSchemeColor: SchemeColor.onSurface,
     interactionEffects: true,
     tintedDisabledControls: true,
     useM2StyleDividerInM3: false,

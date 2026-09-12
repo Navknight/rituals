@@ -7,6 +7,7 @@ import 'package:rituals/services/streak_service.dart';
 final _today = DateTime(2026, 6, 15);
 
 Ritual _ritual({
+  bool requirePhoto = false,
   RitualType type = RitualType.check,
   double target = 1,
   ScheduleType scheduleType = ScheduleType.weekdays,
@@ -25,18 +26,25 @@ Ritual _ritual({
     scheduleDays: days,
     timesPerWeek: timesPerWeek,
     intervalDays: intervalDays,
+    requirePhoto: requirePhoto,
     createdBy: 'u1',
     createdAt: createdAt ?? _today.subtract(const Duration(days: 60)),
   );
 }
 
-RitualEntry _entry(DateTime day, {double value = 1, bool skipped = false}) {
+RitualEntry _entry(
+  DateTime day, {
+  double value = 1,
+  bool skipped = false,
+  String? photoUrl,
+}) {
   return RitualEntry(
     id: RitualEntry.dayKey(day),
     userId: 'u1',
     day: RitualEntry.dayKey(day),
     value: value,
     skipped: skipped,
+    photoUrl: photoUrl,
     createdAt: day,
   );
 }
@@ -221,6 +229,91 @@ void main() {
     });
   });
 
+  group('photo proof', () {
+    test('a ritual defaults to requiring a photo', () {
+      expect(
+        Ritual(
+          id: 'r',
+          title: 'T',
+          emoji: 'x',
+          createdBy: 'u',
+          createdAt: _today,
+        ).requirePhoto,
+        isTrue,
+      );
+    });
+
+    test('hitting the target without a photo does not count', () {
+      final ritual = _ritual(requirePhoto: true);
+      final info = run(ritual, [_entry(_today)]);
+      expect(info.resultFor(_today).status, DayStatus.partial);
+      expect(info.currentStreak, 0);
+      expect(info.totalCompletions, 0);
+    });
+
+    test('the same day counts once a photo is attached', () {
+      final ritual = _ritual(requirePhoto: true);
+      final info = run(ritual, [
+        _entry(_today, photoUrl: 'https://example.test/a.jpg'),
+      ]);
+      expect(info.resultFor(_today).status, DayStatus.done);
+      expect(info.currentStreak, 1);
+    });
+
+    test('a photo on a separate log for the day still proves it', () {
+      final ritual = _ritual(requirePhoto: true, type: RitualType.quantity,
+          target: 3);
+      final day = RitualEntry.dayKey(_today);
+      final info = run(ritual, [
+        RitualEntry(
+            id: 'a', userId: 'u1', day: day, value: 2, createdAt: _today),
+        RitualEntry(
+          id: 'b',
+          userId: 'u1',
+          day: day,
+          value: 1,
+          photoUrl: 'https://example.test/b.jpg',
+          createdAt: _today,
+        ),
+      ]);
+      expect(info.resultFor(_today).status, DayStatus.done);
+    });
+
+    test('a ritual that does not ask for proof counts on a tap', () {
+      final ritual = _ritual(requirePhoto: false);
+      expect(run(ritual, [_entry(_today)]).currentStreak, 1);
+    });
+
+    test('a missing photo breaks the streak like any other miss', () {
+      final ritual = _ritual(
+        requirePhoto: true,
+        createdAt: _today.subtract(const Duration(days: 4)),
+      );
+      final entries = [
+        _entry(_today, photoUrl: 'p'),
+        _entry(_today.subtract(const Duration(days: 1))),
+        _entry(_today.subtract(const Duration(days: 2)), photoUrl: 'p'),
+        _entry(_today.subtract(const Duration(days: 3)), photoUrl: 'p'),
+      ];
+      final info = run(ritual, entries);
+      expect(info.currentStreak, 1);
+      expect(info.longestStreakOverall, 2);
+    });
+
+    test('a skip still holds the streak for a photo ritual', () {
+      final ritual = _ritual(
+        requirePhoto: true,
+        createdAt: _today.subtract(const Duration(days: 3)),
+      );
+      final info = run(ritual, [
+        _entry(_today, photoUrl: 'p'),
+        _entry(_today.subtract(const Duration(days: 1)), skipped: true),
+        _entry(_today.subtract(const Duration(days: 2)), photoUrl: 'p'),
+      ]);
+      expect(info.currentStreak, 2);
+    });
+  });
+
   group('day keys', () {
     test('round trip', () {
       final key = RitualEntry.dayKey(DateTime(2026, 1, 9));
@@ -252,7 +345,8 @@ void main() {
       });
       expect(restored.type, RitualType.check);
       expect(restored.scheduleType, ScheduleType.weekdays);
-      expect(restored.requirePhoto, isFalse);
+      // Every ritual written by the old app required a photo.
+      expect(restored.requirePhoto, isTrue);
       expect(restored.target, 1);
     });
 

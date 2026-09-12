@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,14 @@ import 'package:rituals/services/notification_service.dart';
 import 'package:rituals/services/widget_service.dart';
 
 import 'firebase_options.dart';
+
+/// Run against the local Firebase emulators with
+/// `flutter run --dart-define=USE_EMULATOR=true`.
+const _useEmulator = bool.fromEnvironment('USE_EMULATOR');
+const _emulatorHost = String.fromEnvironment(
+  'EMULATOR_HOST',
+  defaultValue: 'localhost',
+);
 
 const _googleClientId =
     '637686614153-t097c2sv88tpnk7josd88t0bur78kao6.apps.googleusercontent.com';
@@ -36,16 +45,24 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    FirebaseFirestore.instance.settings = const Settings(
-      persistenceEnabled: true,
-      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    );
+    if (_useEmulator) {
+      FirebaseFirestore.instance.useFirestoreEmulator(_emulatorHost, 8080);
+      await FirebaseAuth.instance.useAuthEmulator(_emulatorHost, 9099);
+      await FirebaseStorage.instance.useStorageEmulator(_emulatorHost, 9199);
+    } else {
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+    }
   } catch (e) {
     debugPrint('[main] Firebase init failed: $e');
   }
 
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    // Without this the widget cannot read anything the app saves.
+    await WidgetService().initialize();
   }
 
   GoogleSignIn.instance.authenticationEvents.listen((event) async {

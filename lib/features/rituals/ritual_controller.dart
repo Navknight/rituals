@@ -11,23 +11,37 @@ class DayProgress {
   final bool skipped;
   final bool hasPhoto;
 
+  /// Whether this ritual only counts with a photo attached.
+  final bool needsPhoto;
+
   const DayProgress({
     required this.value,
     required this.target,
     this.skipped = false,
     this.hasPhoto = false,
+    this.needsPhoto = false,
   });
 
   static const none = DayProgress(value: 0, target: 1);
 
-  bool get isDone => !skipped && value >= target;
+  /// Target reached, and proven if the ritual asks for proof.
+  bool get isDone => !skipped && value >= target && (!needsPhoto || hasPhoto);
+
+  /// The target is met but the photo is still missing.
+  bool get awaitingPhoto =>
+      !skipped && value >= target && needsPhoto && !hasPhoto;
+
   bool get isStarted => !skipped && value > 0;
   double get fraction =>
       target <= 0 ? 0 : (value / target).clamp(0.0, 1.0).toDouble();
 
   factory DayProgress.from(Ritual ritual, List<RitualEntry>? entries) {
     if (entries == null || entries.isEmpty) {
-      return DayProgress(value: 0, target: ritual.target);
+      return DayProgress(
+        value: 0,
+        target: ritual.target,
+        needsPhoto: ritual.requirePhoto,
+      );
     }
     var total = 0.0;
     var skipped = false;
@@ -45,6 +59,7 @@ class DayProgress {
       target: ritual.target,
       skipped: skipped && total == 0,
       hasPhoto: photo,
+      needsPhoto: ritual.requirePhoto,
     );
   }
 }

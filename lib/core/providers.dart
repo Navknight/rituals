@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rituals/features/commentary/commentary.dart';
 import 'package:rituals/models/group.dart';
 import 'package:rituals/models/ritual.dart';
 import 'package:rituals/models/ritual_entry.dart';
@@ -83,6 +84,18 @@ class RitualRef {
   int get hashCode => Object.hash(groupId, ritualId);
 }
 
+/// Every log in a space, keyed by ritual id.
+final spaceEntriesProvider =
+    StreamProvider.family<Map<String, List<RitualEntry>>, String>((ref, groupId) {
+  return ref.watch(ritualServiceProvider).watchAllEntries(groupId).map((entries) {
+    final byRitual = <String, List<RitualEntry>>{};
+    for (final entry in entries) {
+      byRitual.putIfAbsent(entry.ritualId, () => []).add(entry);
+    }
+    return byRitual;
+  });
+});
+
 final ritualEntriesProvider =
     StreamProvider.family<List<RitualEntry>, RitualRef>(
   (ref, key) => ref
@@ -96,3 +109,7 @@ final memberProfilesProvider =
   if (group == null) return {};
   return ref.watch(userServiceProvider).getProfiles(group.memberIds);
 });
+
+/// Picks the app's commentary lines. Kept alive so the same joke does not
+/// repeat across rebuilds.
+final commentaryProvider = Provider<Commentary>((ref) => Commentary());

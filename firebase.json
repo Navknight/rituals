@@ -47,15 +47,30 @@
     "headers": [
       {
         "source": "/flutter_service_worker.js",
-        "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
       },
       {
         "source": "/index.html",
-        "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
       },
       {
         "source": "/firebase-messaging-sw.js",
-        "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
       }
     ],
     "rewrites": [
@@ -64,5 +79,24 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "storage": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }

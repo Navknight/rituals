@@ -8,9 +8,13 @@ class CameraScreen extends StatefulWidget {
     super.key,
     required this.groupId,
     required this.ritualId,
+    this.completionValue = 1,
   });
   final String groupId;
   final String ritualId;
+
+  /// Progress the photo logs when it is saved.
+  final double completionValue;
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -53,6 +57,7 @@ class _CameraScreenState extends State<CameraScreen> {
             photoPath: picked.path,
             groupId: widget.groupId,
             ritualId: widget.ritualId,
+            completionValue: widget.completionValue,
           ),
         ),
       );
@@ -115,6 +120,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                   photoPath: photo.path,
                                   groupId: widget.groupId,
                                   ritualId: widget.ritualId,
+                                  completionValue: widget.completionValue,
                                 ),
                               ),
                             );

@@ -144,10 +144,14 @@ class RitualTile extends StatelessWidget {
   String _subtitle() {
     if (progress.skipped) return 'Skipped today';
     if (!dueToday) return 'Rest day · ${ritual.scheduleLabel}';
+    if (progress.awaitingPhoto) return 'Needs a photo to count';
 
     switch (ritual.type) {
       case RitualType.check:
-        return progress.isDone ? 'Done today' : ritual.scheduleLabel;
+        if (progress.isDone) return 'Done today';
+        return ritual.requirePhoto
+            ? '${ritual.scheduleLabel} · photo proof'
+            : ritual.scheduleLabel;
       case RitualType.quantity:
         return '${_trim(progress.value)} of ${ritual.targetLabel}';
       case RitualType.timer:
@@ -224,6 +228,13 @@ class _ProgressRing extends StatelessWidget {
                             color: accent,
                             size: 26,
                           )
+                        : progress.awaitingPhoto
+                            ? Icon(
+                                LucideIcons.camera,
+                                key: const ValueKey('needsPhoto'),
+                                color: accent,
+                                size: 22,
+                              )
                         : Text(
                             ritual.emoji,
                             key: const ValueKey('emoji'),

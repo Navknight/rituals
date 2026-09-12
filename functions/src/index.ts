@@ -129,6 +129,44 @@ export const onNudgeCreated = onDocumentCreated(
   }
 );
 
+// Mirrors the reminder lines in lib/features/commentary/lines.dart. Kept here
+// so a push notification sounds like the rest of the app.
+const REMINDER_LINES: Record<string, string[]> = {
+  kind: [
+    "Time for {ritual}.",
+    "{ritual} is waiting whenever you are.",
+    "A small window for {ritual}.",
+  ],
+  dry: [
+    "{ritual}. Now would be the time.",
+    "{ritual} is due. No pressure, obviously.",
+    "Reminder: {ritual}. You did ask for this.",
+  ],
+  brutal: [
+    "{ritual}. Now. Before you talk yourself out of it.",
+    "{ritual} is due and your excuses are getting worse.",
+    "Get up. {ritual}. It takes less time than the guilt.",
+  ],
+  brutalProfane: [
+    "{ritual}. Now. Before you talk yourself out of it.",
+    "Get off your arse. {ritual} is due.",
+    "{ritual}. Damn it, you set this reminder yourself.",
+  ],
+};
+
+function reminderBody(
+  tone: string | undefined,
+  allowProfanity: boolean,
+  ritual: string
+): string {
+  if (tone === "off") return "";
+  let key = tone ?? "kind";
+  if (key === "brutal" && allowProfanity) key = "brutalProfane";
+  const pool = REMINDER_LINES[key] ?? REMINDER_LINES.kind;
+  const line = pool[Math.floor(Math.random() * pool.length)];
+  return line.replace("{ritual}", ritual);
+}
+
 function dayKey(date: Date): string {
   const y = date.getFullYear();
   const m = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -225,27 +263,37 @@ export const sendDailyReminders = onSchedule("every 15 minutes", async () => {
         loggedSnapshot.docs.map((doc) => doc.data().userId as string)
       );
 
-      const tokens: string[] = [];
+      // Each member hears the reminder in the tone they chose.
+      let sent = 0;
       for (const uid of memberIds) {
         if (alreadyLogged.has(uid)) continue;
-        const userDoc = await db.collection("users").doc(uid).get();
-        const token = userDoc.data()?.fcmToken;
-        if (token) tokens.push(token);
+        const userData = (await db.collection("users").doc(uid).get()).data();
+        const token = userData?.fcmToken;
+        if (!token) continue;
+
+        const body = reminderBody(
+          userData?.commentaryTone,
+          userData?.allowProfanity === true,
+          ritual.title as string
+        );
+        if (!body) continue;
+
+        await messaging.send({
+          token,
+          notification: {
+            title: `${ritual.emoji as string} ${ritual.title as string}`,
+            body,
+          },
+          data: {groupId, ritualId: ritualDoc.id, type: "reminder"},
+        });
+        sent++;
       }
-      if (tokens.length === 0) continue;
 
-      await messaging.sendEachForMulticast({
-        tokens,
-        notification: {
-          title: `${ritual.emoji as string} ${ritual.title as string}`,
-          body: "Time for this one.",
-        },
-        data: {groupId, ritualId: ritualDoc.id, type: "reminder"},
-      });
-
-      console.log(
-        `Reminder sent for ${ritual.title as string} in ${groupId}`
-      );
+      if (sent > 0) {
+        console.log(
+          `Reminder sent to ${sent} for ${ritual.title as string} in ${groupId}`
+        );
+      }
     }
   }
 });

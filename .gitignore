@@ -44,8 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# AI
-.claude
 
 # Code editors
 .vscode

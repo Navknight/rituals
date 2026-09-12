@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/core/providers.dart';
 import 'package:rituals/core/settings_provider.dart';
+import 'package:rituals/features/commentary/commentary.dart';
 import 'package:rituals/features/rituals/ritual_controller.dart';
 import 'package:rituals/features/rituals/ritual_editor.dart';
+import 'package:rituals/features/camera/camera_screen.dart';
 import 'package:rituals/features/rituals/ritual_tile.dart';
 import 'package:rituals/features/streaks/ritual_detail_screen.dart';
 import 'package:rituals/models/ritual.dart';
@@ -67,11 +69,23 @@ class HomeScreen extends ConsumerWidget {
         final sections = <Widget>[];
 
         if (filter != RitualFilter.archived) {
+          final settings = ref.watch(settingsProvider);
+          final dayContext = CommentaryContext(
+            doneToday: doneCount,
+            dueToday: due.length,
+            hour: today.hour,
+          );
           sections.add(
             _DayHeader(
               date: today,
               done: doneCount,
               total: due.length,
+              remark: ref.read(commentaryProvider).lineFor(
+                    Commentary.momentForDay(dayContext),
+                    tone: settings.tone,
+                    allowProfanity: settings.allowProfanity,
+                    context: dayContext,
+                  ),
             ),
           );
         }
@@ -193,15 +207,55 @@ class HomeScreen extends ConsumerWidget {
     if (progress.isDone || progress.skipped) {
       await controller.clear(groupId: groupId, ritual: ritual);
       if (context.mounted) {
-        _undoBar(context, ref, ritual, progress, 'Cleared ${ritual.title}');
+        _undoBar(
+          context,
+          ref,
+          ritual,
+          progress,
+          _remark(ref, Moment.undone, ritual: ritual) ??
+              'Cleared ${ritual.title}',
+        );
       }
+      return;
+    }
+
+    // A ritual that asks for proof is not done until the photo lands, so the
+    // tap opens the camera rather than ticking a box.
+    if (ritual.requirePhoto) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CameraScreen(
+            groupId: groupId,
+            ritualId: ritual.id,
+            completionValue: ritual.target,
+          ),
+        ),
+      );
       return;
     }
 
     await controller.complete(groupId: groupId, ritual: ritual);
     if (!context.mounted) return;
 
-    if (ref.read(settingsProvider).celebrate) {
+    // The streak including today, so a milestone is announced as it happens.
+    final entries = ref.read(spaceEntriesProvider(groupId)).value?[ritual.id];
+    final streak = ref.read(streakServiceProvider).analyse(
+          ritual: ritual,
+          entries: [
+            ...?entries?.where((e) => e.day != RitualEntry.dayKey(DateTime.now())),
+            RitualEntry(
+              id: 'pending',
+              userId: '',
+              ritualId: ritual.id,
+              day: RitualEntry.dayKey(DateTime.now()),
+              value: ritual.target,
+              createdAt: DateTime.now(),
+            ),
+          ],
+        ).currentStreak;
+
+    final settings = ref.read(settingsProvider);
+    if (settings.celebrate) {
       Confetti.launch(
         context,
         options: ConfettiOptions(
@@ -212,7 +266,41 @@ class HomeScreen extends ConsumerWidget {
         ),
       );
     }
-    _undoBar(context, ref, ritual, progress, '${ritual.title} done');
+    _undoBar(
+      context,
+      ref,
+      ritual,
+      progress,
+      _remark(
+            ref,
+            Commentary.isMilestone(streak)
+                ? Moment.streakMilestone
+                : Moment.completed,
+            ritual: ritual,
+            streak: streak,
+          ) ??
+          '${ritual.title} done',
+    );
+  }
+
+  /// A line for the moment, or null when commentary is off.
+  String? _remark(
+    WidgetRef ref,
+    Moment moment, {
+    Ritual? ritual,
+    int streak = 0,
+  }) {
+    final settings = ref.read(settingsProvider);
+    return ref.read(commentaryProvider).lineFor(
+          moment,
+          tone: settings.tone,
+          allowProfanity: settings.allowProfanity,
+          context: CommentaryContext(
+            streak: streak,
+            ritualTitle: ritual?.title,
+            hour: DateTime.now().hour,
+          ),
+        );
   }
 
   Future<void> _skip(
@@ -237,7 +325,8 @@ class HomeScreen extends ConsumerWidget {
         progress,
         progress.skipped
             ? '${ritual.title} back on the schedule'
-            : 'Skipped ${ritual.title}. Streak held.',
+            : _remark(ref, Moment.skipped, ritual: ritual) ??
+                'Skipped ${ritual.title}. Streak held.',
       );
     }
   }
@@ -306,11 +395,13 @@ class _DayHeader extends StatelessWidget {
     required this.date,
     required this.done,
     required this.total,
+    this.remark,
   });
 
   final DateTime date;
   final int done;
   final int total;
+  final String? remark;
 
   @override
   Widget build(BuildContext context) {
@@ -331,11 +422,7 @@ class _DayHeader extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            total == 0
-                ? 'Nothing scheduled today'
-                : allDone
-                    ? 'All $total done. That is the whole day.'
-                    : '$done of $total done',
+            total == 0 ? 'Nothing scheduled today' : '$done of $total done',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: allDone
                   ? theme.colorScheme.primary
@@ -343,6 +430,17 @@ class _DayHeader extends StatelessWidget {
               fontWeight: allDone ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
+          if (remark != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              remark!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                fontStyle: FontStyle.italic,
+                height: 1.35,
+              ),
+            ),
+          ],
           if (total > 0) ...[
             const SizedBox(height: 12),
             ClipRRect(

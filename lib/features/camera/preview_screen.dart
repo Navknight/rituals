@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rituals/core/providers.dart';
+import 'package:rituals/services/widget_service.dart';
 import 'package:rituals/features/camera/camera_provider.dart';
 
 class PreviewScreen extends ConsumerStatefulWidget {
@@ -113,6 +114,39 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
     );
   }
 
+  /// Push a photo the user just took straight to the home screen widget,
+  /// rather than waiting for a notification that never comes in a space of one.
+  Future<void> _refreshWidget(String uid, String caption) async {
+    try {
+      final rituals = await ref.read(ritualsProvider(widget.groupId).future);
+      final ritual = rituals.where((r) => r.id == widget.ritualId).firstOrNull;
+      if (ritual == null) return;
+
+      final entries = await ref
+          .read(ritualServiceProvider)
+          .fetchRitualEntries(widget.groupId, widget.ritualId);
+      final streak = ref
+          .read(streakServiceProvider)
+          .analyse(ritual: ritual, entries: entries)
+          .currentStreak;
+
+      final profile = await ref.read(userServiceProvider).getProfile(uid);
+      await WidgetService().updateWidget(
+        photoUrl: _uploadedUrl ?? '',
+        localPath: _localPath,
+        posterName: profile?.displayName ?? 'You',
+        caption: caption.isEmpty ? null : caption,
+        ritualTitle: ritual.title,
+        streak: streak,
+      );
+    } catch (e) {
+      debugPrint('[PreviewScreen] widget refresh failed: $e');
+    }
+  }
+
+  String? _uploadedUrl;
+  String? _localPath;
+
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
@@ -125,7 +159,8 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
 
       final photoService = ref.read(photoServiceProvider);
       final result = await photoService.compressAndSave(rawBytes);
-      final url = await photoService.uploadToRelay(
+      _localPath = result.localPath;
+      final url = _uploadedUrl = await photoService.uploadToRelay(
         result.bytes,
         widget.groupId,
         widget.ritualId,
@@ -142,6 +177,8 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
             localPath: result.localPath,
             caption: caption.isEmpty ? null : caption,
           );
+
+      await _refreshWidget(uid, caption);
 
       if (mounted && context.mounted) {
         var count = 0;

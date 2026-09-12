@@ -41,12 +41,15 @@ class SpacesScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               if (profile.sharedGroupIds.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 4,
+                  ),
                   child: Text(
                     'Rituals are yours alone until you share them.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 )
               else
@@ -126,6 +129,7 @@ class SpacesScreen extends ConsumerWidget {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => _JoinSpaceSheet(uid: uid),
     );
   }
@@ -141,9 +145,9 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       text,
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 }
@@ -167,7 +171,9 @@ class _PersonalSpaceCard extends ConsumerWidget {
         leading: Icon(LucideIcons.lock, color: scheme.primary),
         title: Text(group?.name ?? 'My Rituals'),
         subtitle: const Text('Private'),
-        trailing: isActive ? Icon(LucideIcons.check, color: scheme.primary) : null,
+        trailing: isActive
+            ? Icon(LucideIcons.check, color: scheme.primary)
+            : null,
         onTap: () {
           ref.read(activeSpaceProvider.notifier).select(groupId);
           Navigator.pop(context);
@@ -206,7 +212,8 @@ class _SharedSpaceCard extends ConsumerWidget {
           children: [
             if (isActive) Icon(LucideIcons.check, color: scheme.primary),
             PopupMenuButton<String>(
-              onSelected: (value) => _onMenuSelected(context, ref, value, group),
+              onSelected: (value) =>
+                  _onMenuSelected(context, ref, value, group),
               itemBuilder: (context) => const [
                 PopupMenuItem(value: 'invite', child: Text('Invite')),
                 PopupMenuItem(value: 'rename', child: Text('Rename')),
@@ -268,7 +275,9 @@ class _SharedSpaceCard extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Leave space'),
-        content: Text('You will lose access to "${group.name}" and its rituals.'),
+        content: Text(
+          'You will lose access to "${group.name}" and its rituals.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -360,46 +369,57 @@ class _JoinSpaceSheetState extends ConsumerState<_JoinSpaceSheet> {
         left: 20,
         right: 20,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        bottom:
+            MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).padding.bottom +
+            20,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Join with a code', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            maxLength: 6,
-            textCapitalization: TextCapitalization.characters,
-            textAlign: TextAlign.center,
-            style: const TextStyle(letterSpacing: 6, fontWeight: FontWeight.bold),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
-              UpperCaseTextFormatter(),
-            ],
-            decoration: const InputDecoration(counterText: ''),
-            onSubmitted: (_) => _submit(),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _scan,
-            icon: const Icon(LucideIcons.scanLine, size: 18),
-            label: const Text('Scan QR code'),
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: _busy ? null : _submit,
-            child: _busy
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Join'),
-          ),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Join with a code',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              maxLength: 6,
+              textCapitalization: TextCapitalization.characters,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                letterSpacing: 6,
+                fontWeight: FontWeight.bold,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+                UpperCaseTextFormatter(),
+              ],
+              decoration: const InputDecoration(counterText: ''),
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _scan,
+              icon: const Icon(LucideIcons.scanLine, size: 18),
+              label: const Text('Scan QR code'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _busy ? null : _submit,
+              child: _busy
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Join'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -447,6 +467,7 @@ Future<void> showInviteSheet(BuildContext context, Group group) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     builder: (context) => _InviteSheet(group: group),
   );
 }
@@ -459,15 +480,16 @@ class _InviteSheet extends StatelessWidget {
   Future<void> _copy(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: group.inviteCode));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Code copied')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Code copied')));
   }
 
   Future<void> _share() {
     return SharePlus.instance.share(
       ShareParams(
-        text: 'Join my space "${group.name}" on Rituals with code '
+        text:
+            'Join my space "${group.name}" on Rituals with code '
             '${group.inviteCode}',
         subject: 'Join ${group.name} on Rituals',
       ),
@@ -488,7 +510,10 @@ class _InviteSheet extends StatelessWidget {
             data: group.inviteCode,
             size: 200,
             backgroundColor: Colors.transparent,
-            eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: scheme.onSurface),
+            eyeStyle: QrEyeStyle(
+              eyeShape: QrEyeShape.square,
+              color: scheme.onSurface,
+            ),
             dataModuleStyle: QrDataModuleStyle(
               dataModuleShape: QrDataModuleShape.square,
               color: scheme.onSurface,

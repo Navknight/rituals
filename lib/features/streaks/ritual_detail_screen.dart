@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/app/theme.dart';
 import 'package:rituals/core/providers.dart';
+import 'package:rituals/core/settings_provider.dart';
+import 'package:rituals/features/commentary/commentary.dart';
 import 'package:rituals/features/camera/camera_screen.dart';
 import 'package:rituals/features/rituals/ritual_controller.dart';
 import 'package:rituals/features/rituals/ritual_editor.dart';
@@ -12,6 +14,7 @@ import 'package:rituals/models/ritual.dart';
 import 'package:rituals/models/ritual_entry.dart';
 import 'package:rituals/models/user_profiles.dart';
 import 'package:rituals/shared/user_avatar.dart';
+import 'package:rituals/services/streak_service.dart';
 
 class RitualDetailScreen extends ConsumerStatefulWidget {
   const RitualDetailScreen({
@@ -24,8 +27,7 @@ class RitualDetailScreen extends ConsumerStatefulWidget {
   final Ritual ritual;
 
   @override
-  ConsumerState<RitualDetailScreen> createState() =>
-      _RitualDetailScreenState();
+  ConsumerState<RitualDetailScreen> createState() => _RitualDetailScreenState();
 }
 
 class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
@@ -81,8 +83,10 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
         error: (error, stack) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text('Could not load this ritual.\n$error',
-                textAlign: TextAlign.center),
+            child: Text(
+              'Could not load this ritual.\n$error',
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
         data: (entries) => _RitualDetailBody(
@@ -91,7 +95,10 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
           entries: entries,
           visibleMonth: _visibleMonth,
           onPrevMonth: () => setState(() {
-            _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month - 1);
+            _visibleMonth = DateTime(
+              _visibleMonth.year,
+              _visibleMonth.month - 1,
+            );
           }),
           onNextMonth: () {
             final now = DateTime.now();
@@ -108,10 +115,8 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
   void _openCamera(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => CameraScreen(
-          groupId: widget.groupId,
-          ritualId: widget.ritual.id,
-        ),
+        builder: (context) =>
+            CameraScreen(groupId: widget.groupId, ritualId: widget.ritual.id),
       ),
     );
   }
@@ -138,10 +143,9 @@ class _RitualDetailBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final accent = Color(ritual.colorValue);
-    final info = ref.read(streakServiceProvider).analyse(
-          ritual: ritual,
-          entries: entries,
-        );
+    final info = ref
+        .read(streakServiceProvider)
+        .analyse(ritual: ritual, entries: entries);
     final todayKey = RitualEntry.dayKey(DateTime.now());
     final todayEntries = entries.where((e) => e.day == todayKey).toList();
     final today = DayProgress.from(ritual, todayEntries);
@@ -154,6 +158,7 @@ class _RitualDetailBody extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _StreakHero(streak: info.currentStreak, ritual: ritual),
+              _Remark(ritual: ritual, info: info),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _TodayAction(
@@ -228,8 +233,8 @@ class _RitualDetailBody extends ConsumerWidget {
                         'Strongest on ${_weekdayName(info.strongestWeekday!)}, '
                         'weakest on ${_weekdayName(info.weakestWeekday!)}.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ],
@@ -250,7 +255,11 @@ class _RitualDetailBody extends ConsumerWidget {
                   title: 'Photos',
                   child: _PhotosStrip(groupId: groupId, entries: entries),
                 ),
-              _MembersSection(groupId: groupId, ritual: ritual, entries: entries),
+              _MembersSection(
+                groupId: groupId,
+                ritual: ritual,
+                entries: entries,
+              ),
               const SizedBox(height: 32),
             ],
           ),
@@ -261,7 +270,13 @@ class _RitualDetailBody extends ConsumerWidget {
 
   static String _weekdayName(int weekday) {
     const names = [
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
     ];
     return names[weekday - 1];
   }
@@ -286,6 +301,82 @@ class _Section extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// One line of commentary about how this ritual is actually going.
+class _Remark extends ConsumerWidget {
+  const _Remark({required this.ritual, required this.info});
+
+  final Ritual ritual;
+  final StreakInfo info;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final settings = ref.watch(settingsProvider);
+
+    final lastDone = _daysSinceLastDone();
+    final Moment moment;
+    if (info.totalCompletions == 0) {
+      moment = Moment.firstRitual;
+    } else if (lastDone != null && lastDone >= 7) {
+      moment = Moment.longLapse;
+    } else if (info.currentStreak == 0 && info.longestStreakOverall >= 3) {
+      moment = Moment.streakBroken;
+    } else if (info.score >= 0.7) {
+      moment = Moment.strongScore;
+    } else if (info.score < 0.35) {
+      moment = Moment.weakScore;
+    } else {
+      return const SizedBox.shrink();
+    }
+
+    final line = ref
+        .read(commentaryProvider)
+        .lineFor(
+          moment,
+          tone: settings.tone,
+          allowProfanity: settings.allowProfanity,
+          context: CommentaryContext(
+            streak: info.currentStreak,
+            score: info.score,
+            daysSinceLastDone: lastDone,
+            ritualTitle: ritual.title,
+          ),
+        );
+    if (line == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          line,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontStyle: FontStyle.italic,
+            height: 1.35,
+          ),
+        ),
+      ),
+    );
+  }
+
+  int? _daysSinceLastDone() {
+    final today = DateTime.now();
+    final midnight = DateTime(today.year, today.month, today.day);
+    for (var i = 0; i <= 120; i++) {
+      final day = midnight.subtract(Duration(days: i));
+      if (info.days[RitualEntry.dayKey(day)]?.status == DayStatus.done) {
+        return i;
+      }
+    }
+    return null;
   }
 }
 
@@ -323,18 +414,16 @@ class _StreakHero extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'day streak',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: scheme.onSurfaceVariant),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 2),
           Text(
             ritual.scheduleLabel,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: scheme.onSurfaceVariant),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -387,20 +476,55 @@ class _TodayActionState extends ConsumerState<_TodayAction> {
             onPressed: _busy
                 ? null
                 : () => _run(() async {
-                      if (today.isDone) {
-                        await controller.clear(groupId: widget.groupId, ritual: ritual);
-                      } else {
-                        await controller.complete(groupId: widget.groupId, ritual: ritual);
-                      }
-                    }),
-            icon: Icon(today.isDone ? LucideIcons.checkCheck : LucideIcons.check),
-            label: Text(today.isDone ? 'Done today' : 'Mark done'),
+                    if (today.isDone) {
+                      await controller.clear(
+                        groupId: widget.groupId,
+                        ritual: ritual,
+                      );
+                    } else if (ritual.requirePhoto) {
+                      // Proof is the completion for these rituals.
+                      if (!mounted) return;
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => CameraScreen(
+                            groupId: widget.groupId,
+                            ritualId: ritual.id,
+                            completionValue: ritual.target,
+                          ),
+                        ),
+                      );
+                    } else {
+                      await controller.complete(
+                        groupId: widget.groupId,
+                        ritual: ritual,
+                      );
+                    }
+                  }),
+            icon: Icon(
+              today.isDone
+                  ? LucideIcons.checkCheck
+                  : ritual.requirePhoto
+                      ? LucideIcons.camera
+                      : LucideIcons.check,
+            ),
+            label: Text(
+              today.isDone
+                  ? 'Done today'
+                  : ritual.requirePhoto
+                      ? (today.awaitingPhoto ? 'Add the photo' : 'Take a photo')
+                      : 'Mark done',
+            ),
           ),
           if (!today.isDone && !today.skipped)
             TextButton(
               onPressed: _busy
                   ? null
-                  : () => _run(() => controller.skip(groupId: widget.groupId, ritual: ritual)),
+                  : () => _run(
+                      () => controller.skip(
+                        groupId: widget.groupId,
+                        ritual: ritual,
+                      ),
+                    ),
               child: const Text('Skip today'),
             ),
         ],
@@ -420,35 +544,37 @@ class _TodayActionState extends ConsumerState<_TodayAction> {
                 onPressed: _busy
                     ? null
                     : () => _run(() async {
-                          if (ritual.type == RitualType.timer) {
-                            final amount = await showLogAmountSheet(
-                              context,
-                              ritual,
-                              today,
-                            );
-                            if (amount != null) {
-                              await controller.addProgress(
-                                groupId: widget.groupId,
-                                ritual: ritual,
-                                current: today,
-                                amount: amount,
-                              );
-                            }
-                          } else {
+                        if (ritual.type == RitualType.timer) {
+                          final amount = await showLogAmountSheet(
+                            context,
+                            ritual,
+                            today,
+                          );
+                          if (amount != null) {
                             await controller.addProgress(
                               groupId: widget.groupId,
                               ritual: ritual,
                               current: today,
-                              amount: 1,
+                              amount: amount,
                             );
                           }
-                        }),
-                icon: Icon(today.isDone ? LucideIcons.checkCheck : LucideIcons.plus),
+                        } else {
+                          await controller.addProgress(
+                            groupId: widget.groupId,
+                            ritual: ritual,
+                            current: today,
+                            amount: 1,
+                          );
+                        }
+                      }),
+                icon: Icon(
+                  today.isDone ? LucideIcons.checkCheck : LucideIcons.plus,
+                ),
                 label: Text(
                   today.isDone
                       ? 'Done today'
                       : '${today.value.round()}/${ritual.target.round()} ${ritual.unit}'
-                          .trim(),
+                            .trim(),
                 ),
               ),
             ),
@@ -458,7 +584,12 @@ class _TodayActionState extends ConsumerState<_TodayAction> {
           TextButton(
             onPressed: _busy
                 ? null
-                : () => _run(() => controller.skip(groupId: widget.groupId, ritual: ritual)),
+                : () => _run(
+                    () => controller.skip(
+                      groupId: widget.groupId,
+                      ritual: ritual,
+                    ),
+                  ),
             child: const Text('Skip today'),
           ),
       ],
@@ -566,7 +697,8 @@ class _PhotosStrip extends ConsumerWidget {
                               poster?.displayName ?? 'Someone',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
-                            if (entry.caption != null && entry.caption!.isNotEmpty)
+                            if (entry.caption != null &&
+                                entry.caption!.isNotEmpty)
                               Text(
                                 entry.caption!,
                                 style: Theme.of(context).textTheme.bodySmall,
@@ -624,7 +756,8 @@ class _MembersSection extends ConsumerWidget {
               uid: uid,
               hasLoggedToday: loggedToday.contains(uid),
               canNudge: uid != myUid,
-              onNudge: () => _nudge(context, ref, uid, members[uid]?.displayName),
+              onNudge: () =>
+                  _nudge(context, ref, uid, members[uid]?.displayName),
             ),
         ],
       ),
@@ -647,21 +780,21 @@ class _MembersSection extends ConsumerWidget {
           .doc(ritual.id)
           .collection('nudges')
           .add({
-        'fromUid': myUid,
-        'toUid': toUid,
-        'ritualTitle': ritual.title,
-        'sentAt': FieldValue.serverTimestamp(),
-      });
+            'fromUid': myUid,
+            'toUid': toUid,
+            'ritualTitle': ritual.title,
+            'sentAt': FieldValue.serverTimestamp(),
+          });
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Nudged ${toName ?? 'them'}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Nudged ${toName ?? 'them'}')));
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not send nudge: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not send nudge: $error')));
       }
     }
   }
@@ -692,7 +825,9 @@ class _MemberRow extends StatelessWidget {
         children: [
           UserAvatar(name: name, photoUrl: profile?.photoUrl, radius: 16),
           const SizedBox(width: 10),
-          Expanded(child: Text(name, style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(
+            child: Text(name, style: Theme.of(context).textTheme.bodyMedium),
+          ),
           if (hasLoggedToday)
             Icon(LucideIcons.check, size: 18, color: scheme.doneColor)
           else if (canNudge)
@@ -700,10 +835,9 @@ class _MemberRow extends StatelessWidget {
           else
             Text(
               'Not yet',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
         ],
       ),

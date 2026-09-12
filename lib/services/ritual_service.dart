@@ -93,6 +93,13 @@ class RitualService {
     });
   }
 
+  /// Every log in a space, so cross-ritual stats stay live without a query
+  /// per ritual.
+  Stream<List<RitualEntry>> watchAllEntries(String groupId) {
+    return _entries(groupId).snapshots().map((snapshot) =>
+        snapshot.docs.map((doc) => RitualEntry.fromMap(doc.data())).toList());
+  }
+
   /// Every log for one ritual, newest first.
   Stream<List<RitualEntry>> watchRitualEntries(
     String groupId,

@@ -173,6 +173,7 @@ class StreakService {
     // sips, or a photo added after a check). Sum their values; a day is
     // skipped only if nothing was actually logged.
     final totals = <String, double>{};
+    final photoDays = <String>{};
     final skips = <String>{};
     for (final entry in entries) {
       if (entry.skipped) {
@@ -180,6 +181,7 @@ class StreakService {
         continue;
       }
       totals[entry.day] = (totals[entry.day] ?? 0) + entry.value;
+      if (entry.hasPhoto) photoDays.add(entry.day);
     }
     skips.removeWhere((day) => (totals[day] ?? 0) > 0);
 
@@ -214,10 +216,14 @@ class StreakService {
       final progress = (value / target).clamp(0.0, 1.0);
       final due = ritual.isDueOn(day);
 
+      // Photo proof is the whole point of a ritual that asks for it: hitting
+      // the target without one leaves the day unfinished.
+      final proven = !ritual.requirePhoto || photoDays.contains(key);
+
       final DayStatus status;
       if (skips.contains(key)) {
         status = DayStatus.skipped;
-      } else if (progress >= 1) {
+      } else if (progress >= 1 && proven) {
         status = DayStatus.done;
       } else if (value > 0) {
         status = DayStatus.partial;

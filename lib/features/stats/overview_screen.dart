@@ -16,21 +16,27 @@ class RitualSummary {
 }
 
 final spaceSummaryProvider =
-    FutureProvider.family<List<RitualSummary>, String>((ref, groupId) async {
-  final rituals = await ref.watch(ritualsProvider(groupId).future);
-  final service = ref.watch(ritualServiceProvider);
-  final streaks = ref.watch(streakServiceProvider);
+    Provider.family<AsyncValue<List<RitualSummary>>, String>((ref, groupId) {
+  final ritualsAsync = ref.watch(ritualsProvider(groupId));
+  final entriesAsync = ref.watch(spaceEntriesProvider(groupId));
 
-  final summaries = <RitualSummary>[];
-  for (final ritual in rituals.where((r) => !r.archived)) {
-    final entries = await service.fetchRitualEntries(groupId, ritual.id);
-    summaries.add(RitualSummary(ritual, streaks.analyse(
-      ritual: ritual,
-      entries: entries,
-    )));
-  }
-  summaries.sort((a, b) => b.info.score.compareTo(a.info.score));
-  return summaries;
+  return ritualsAsync.whenData((rituals) {
+    final byRitual = entriesAsync.value ?? const <String, List<RitualEntry>>{};
+    final streaks = ref.watch(streakServiceProvider);
+
+    final summaries = [
+      for (final ritual in rituals.where((r) => !r.archived))
+        RitualSummary(
+          ritual,
+          streaks.analyse(
+            ritual: ritual,
+            entries: byRitual[ritual.id] ?? const [],
+          ),
+        ),
+    ]..sort((a, b) => b.info.score.compareTo(a.info.score));
+
+    return summaries;
+  });
 });
 
 class OverviewScreen extends ConsumerWidget {
@@ -97,7 +103,10 @@ class OverviewScreen extends ConsumerWidget {
         final perfectDays = _perfectDays(summaries);
 
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(spaceSummaryProvider(groupId)),
+          onRefresh: () async {
+            ref.invalidate(ritualsProvider(groupId));
+            ref.invalidate(spaceEntriesProvider(groupId));
+          },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
             children: [

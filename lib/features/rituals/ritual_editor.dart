@@ -94,7 +94,7 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
     _timesPerWeek = ritual?.timesPerWeek ?? 3;
     _intervalDays = ritual?.intervalDays ?? 2;
     _reminderTime = ritual?.reminderTime;
-    _requirePhoto = ritual?.requirePhoto ?? false;
+    _requirePhoto = ritual?.requirePhoto ?? true;
     _colorValue = ritual?.colorValue ?? kRitualColors.first;
   }
 
@@ -240,8 +240,10 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
         final updated = widget.existing!.copyWith(
           title: title,
           emoji: _emoji,
-          description:
-              _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+          description: _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
+          clearDescription: _descriptionController.text.trim().isEmpty,
           type: _type,
           target: target,
           unit: _type == RitualType.quantity ? _unitController.text.trim() : '',
@@ -250,6 +252,7 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
           timesPerWeek: _timesPerWeek,
           intervalDays: _intervalDays,
           reminderTime: _reminderTime,
+          reminderOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
           clearReminder: _reminderTime == null,
           requirePhoto: _requirePhoto,
           colorValue: _colorValue,
@@ -272,6 +275,7 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
           timesPerWeek: _timesPerWeek,
           intervalDays: _intervalDays,
           reminderTime: _reminderTime,
+          reminderOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
           requirePhoto: _requirePhoto,
           colorValue: _colorValue,
           createdBy: uid,
@@ -537,7 +541,12 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Ask for a photo'),
+                title: const Text('Photo proof'),
+                subtitle: Text(
+                  _requirePhoto
+                      ? 'A day only counts once you post a photo.'
+                      : 'A tap is enough to mark this done.',
+                ),
                 secondary: const Icon(LucideIcons.camera),
                 value: _requirePhoto,
                 onChanged: (value) => setState(() => _requirePhoto = value),
