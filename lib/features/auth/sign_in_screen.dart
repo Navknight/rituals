@@ -90,21 +90,29 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       child: CircularProgressIndicator(),
                     )
                   else ...[
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: FilledButton.icon(
-                        onPressed: () => _run(
-                          () => ref.read(authServiceProvider).signInAsGuest(),
+                    // Google first: a returning user reinstalling will reach
+                    // for the prominent button, and picking guest there gives
+                    // them a new identity and an empty history.
+                    if (kIsWeb)
+                      web.renderButton()
+                    else
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: FilledButton.icon(
+                          onPressed: () => _run(
+                            () => ref
+                                .read(authServiceProvider)
+                                .signInWithGoogle(),
+                          ),
+                          icon: const Icon(LucideIcons.logIn, size: 20),
+                          label: const Text('Continue with Google'),
                         ),
-                        icon: const Icon(LucideIcons.zap, size: 20),
-                        label: const Text('Start tracking'),
                       ),
-                    ),
                     const SizedBox(height: 10),
                     Text(
-                      'No account needed. You can add one later and keep '
-                      'everything.',
+                      'Keeps your rituals across devices and reinstalls, and '
+                      'lets you join shared spaces.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -127,26 +135,22 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    if (kIsWeb)
-                      web.renderButton()
-                    else
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton.icon(
-                          onPressed: () => _run(
-                            () => ref
-                                .read(authServiceProvider)
-                                .signInWithGoogle(),
-                          ),
-                          icon: const Icon(LucideIcons.logIn, size: 20),
-                          label: const Text('Continue with Google'),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _run(
+                          () => ref.read(authServiceProvider).signInAsGuest(),
                         ),
+                        icon: const Icon(LucideIcons.zap, size: 20),
+                        label: const Text('Try it as a guest'),
                       ),
+                    ),
                     const SizedBox(height: 10),
                     Text(
-                      'Sign in with Google to sync across devices and join '
-                      'shared spaces.',
+                      'No account, but everything stays on this device. '
+                      'Reinstalling or signing out loses it, unless you '
+                      'connect an account first.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
