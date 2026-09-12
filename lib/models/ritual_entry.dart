@@ -67,21 +67,11 @@ class RitualEntry {
   }
 
   /// `yyyy-MM-dd` for a local date.
-  static String dayKey(DateTime date) {
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    return '${date.year}-$m-$d';
-  }
+  static String dayKey(DateTime date) =>
+      date.toIso8601String().substring(0, 10);
 
-  static DateTime parseDay(String key) {
-    final parts = key.split('-');
-    if (parts.length != 3) return DateTime.now();
-    return DateTime(
-      int.tryParse(parts[0]) ?? 1970,
-      int.tryParse(parts[1]) ?? 1,
-      int.tryParse(parts[2]) ?? 1,
-    );
-  }
+  static DateTime parseDay(String key) =>
+      DateTime.tryParse(key) ?? DateTime.now();
 
   factory RitualEntry.fromMap(Map<String, dynamic> map) {
     final createdAt =

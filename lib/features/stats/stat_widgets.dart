@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:rituals/models/ritual_entry.dart';
 import 'package:rituals/app/theme.dart';
 import 'package:rituals/services/streak_service.dart';
 
@@ -10,12 +11,6 @@ const _monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
-
-String _dayKey(DateTime date) {
-  final m = date.month.toString().padLeft(2, '0');
-  final d = date.day.toString().padLeft(2, '0');
-  return '${date.year}-$m-$d';
-}
 
 /// Colour for one day cell, shared by [HeatmapCalendar] and [MonthCalendar].
 Color dayStatusColor(
@@ -239,7 +234,7 @@ class HeatmapCalendar extends StatelessWidget {
                         padding: const EdgeInsets.only(bottom: _gap),
                         child: _HeatCell(
                           day: day,
-                          result: days[_dayKey(day)],
+                          result: days[RitualEntry.dayKey(day)],
                           accent: accent,
                           isFuture: day.isAfter(todayMidnight),
                           onTap: onTapDay,
@@ -583,7 +578,7 @@ class MonthCalendar extends StatelessWidget {
                           return const SizedBox(height: 36);
                         }
                         final date = DateTime(month.year, month.month, dayNum);
-                        final result = days[_dayKey(date)];
+                        final result = days[RitualEntry.dayKey(date)];
                         final isToday = date == today;
                         final color = result == null
                             ? scheme.emptyColor

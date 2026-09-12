@@ -279,7 +279,7 @@ class _GuestUpgradeCard extends ConsumerWidget {
 
   Future<void> _connect(BuildContext context, WidgetRef ref) async {
     try {
-      await ref.read(authServiceProvider).linkGuestToGoogle();
+      await ref.read(authServiceProvider).signInWithGoogle();
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

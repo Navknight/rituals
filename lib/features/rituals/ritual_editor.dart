@@ -678,7 +678,7 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
   void initState() {
     super.initState();
     _total = widget.value;
-    _controller = TextEditingController(text: _trim(_total));
+    _controller = TextEditingController(text: trimNumber(_total));
   }
 
   @override
@@ -696,7 +696,7 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
   void _setTotal(double value) {
     setState(() {
       _total = value.clamp(0, widget.target * 10);
-      _controller.text = _trim(_total);
+      _controller.text = trimNumber(_total);
     });
   }
 
@@ -735,9 +735,9 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
           Text(widget.ritual.title, style: textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(
-            'Target ${_trim(widget.target)}'
+            'Target ${trimNumber(widget.target)}'
             '${unitLabel.isEmpty ? '' : ' $unitLabel'}'
-            ' \u00b7 logged ${_trim(widget.value)} so far',
+            ' \u00b7 logged ${trimNumber(widget.value)} so far',
             style: textTheme.bodyMedium
                 ?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
@@ -779,7 +779,7 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
             children: [
               for (final step in _steps)
                 ActionChip(
-                  label: Text('+${_trim(step)}'),
+                  label: Text('+${trimNumber(step)}'),
                   onPressed: () => _setTotal(
                     (double.tryParse(_controller.text) ?? _total) + step,
                   ),
@@ -803,7 +803,3 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
   }
 }
 
-String _trim(double value) {
-  if (value == value.roundToDouble()) return value.round().toString();
-  return value.toStringAsFixed(1);
-}

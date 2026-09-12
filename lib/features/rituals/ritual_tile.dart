@@ -166,16 +166,12 @@ class RitualTile extends StatelessWidget {
             ? '${ritual.scheduleLabel} · photo proof'
             : ritual.scheduleLabel;
       case RitualType.quantity:
-        return '${_trim(progress.value)} of ${ritual.targetLabel}';
+        return '${trimNumber(progress.value)} of ${ritual.targetLabel}';
       case RitualType.timer:
-        return '${_trim(progress.value)} of ${_trim(ritual.target)} min';
+        return '${trimNumber(progress.value)} of ${trimNumber(ritual.target)} min';
     }
   }
 
-  static String _trim(double value) {
-    if (value == value.roundToDouble()) return value.round().toString();
-    return value.toStringAsFixed(1);
-  }
 }
 
 /// The tappable ring: a checkbox for check rituals, a progress dial otherwise.

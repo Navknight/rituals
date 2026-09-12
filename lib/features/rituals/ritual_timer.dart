@@ -97,7 +97,7 @@ class _RitualTimerScreenState extends State<_RitualTimerScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text('Discard ${_trim(elapsedMinutes)} min?'),
+          title: Text('Discard ${trimNumber(elapsedMinutes)} min?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -180,7 +180,7 @@ class _RitualTimerScreenState extends State<_RitualTimerScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${_trim(_totalMinutes)} of ${_trim(target)} min',
+                              '${trimNumber(_totalMinutes)} of ${trimNumber(target)} min',
                               style: textTheme.bodyLarge?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                               ),
@@ -265,7 +265,3 @@ String _formatDuration(Duration duration) {
   return '$mm:$ss';
 }
 
-String _trim(double value) {
-  if (value == value.roundToDouble()) return value.round().toString();
-  return value.toStringAsFixed(1);
-}

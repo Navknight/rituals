@@ -54,3 +54,6 @@ android/key.properties
 android/app/upload-keystore.jks
 *.jks
 *.keystore
+
+# Local agent instructions, not part of the project
+CLAUDE.md

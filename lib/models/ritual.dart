@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 /// What "doing" a ritual means.
 enum RitualType {
@@ -143,8 +144,8 @@ class Ritual {
         if (scheduleDays.length == 7) return 'Every day';
         const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         final sorted = List<int>.from(scheduleDays)..sort();
-        if (_sameSet(sorted, const [1, 2, 3, 4, 5])) return 'Weekdays';
-        if (_sameSet(sorted, const [6, 7])) return 'Weekends';
+        if (listEquals(sorted, const [1, 2, 3, 4, 5])) return 'Weekdays';
+        if (listEquals(sorted, const [6, 7])) return 'Weekends';
         return sorted.map((d) => names[d - 1]).join(', ');
       case ScheduleType.timesPerWeek:
         return '${timesPerWeek}x per week';
@@ -159,23 +160,10 @@ class Ritual {
       case RitualType.check:
         return '';
       case RitualType.quantity:
-        return '${_trim(target)}${unit.isEmpty ? '' : ' $unit'}';
+        return '${trimNumber(target)}${unit.isEmpty ? '' : ' $unit'}';
       case RitualType.timer:
-        return '${_trim(target)} min';
+        return '${trimNumber(target)} min';
     }
-  }
-
-  static bool _sameSet(List<int> a, List<int> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
-
-  static String _trim(double value) {
-    if (value == value.roundToDouble()) return value.round().toString();
-    return value.toStringAsFixed(1);
   }
 
   Ritual copyWith({
@@ -280,4 +268,10 @@ class Ritual {
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
+}
+
+/// Formats a target or logged amount without a trailing `.0`.
+String trimNumber(double value) {
+  if (value == value.roundToDouble()) return value.round().toString();
+  return value.toStringAsFixed(1);
 }
