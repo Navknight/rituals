@@ -7,6 +7,7 @@ import 'package:rituals/core/settings_provider.dart';
 import 'package:rituals/features/commentary/commentary.dart';
 import 'package:rituals/features/rituals/ritual_controller.dart';
 import 'package:rituals/features/rituals/ritual_editor.dart';
+import 'package:rituals/features/rituals/ritual_timer.dart';
 import 'package:rituals/features/camera/camera_screen.dart';
 import 'package:rituals/features/rituals/ritual_tile.dart';
 import 'package:rituals/features/streaks/ritual_detail_screen.dart';
@@ -341,8 +342,9 @@ class HomeScreen extends ConsumerWidget {
     if (!controller.ready) return;
 
     if (ritual.type == RitualType.timer) {
-      final minutes = await showLogAmountSheet(context, ritual, progress);
+      final minutes = await showRitualTimer(context, ritual, progress);
       if (minutes == null) return;
+      if (!context.mounted) return;
       await controller.addProgress(
         groupId: groupId,
         ritual: ritual,

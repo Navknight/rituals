@@ -9,6 +9,7 @@ import 'package:rituals/features/commentary/commentary.dart';
 import 'package:rituals/features/camera/camera_screen.dart';
 import 'package:rituals/features/rituals/ritual_controller.dart';
 import 'package:rituals/features/rituals/ritual_editor.dart';
+import 'package:rituals/features/rituals/ritual_timer.dart';
 import 'package:rituals/features/stats/stat_widgets.dart';
 import 'package:rituals/models/ritual.dart';
 import 'package:rituals/models/ritual_entry.dart';
@@ -546,12 +547,12 @@ class _TodayActionState extends ConsumerState<_TodayAction> {
                     ? null
                     : () => _run(() async {
                         if (ritual.type == RitualType.timer) {
-                          final amount = await showLogAmountSheet(
+                          final amount = await showRitualTimer(
                             context,
                             ritual,
                             today,
                           );
-                          if (amount != null) {
+                          if (amount != null && mounted) {
                             await controller.addProgress(
                               groupId: widget.groupId,
                               ritual: ritual,
