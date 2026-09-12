@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/features/camera/preview_screen.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -21,57 +23,111 @@ class CameraScreen extends StatefulWidget {
 }
 
 class _CameraScreenState extends State<CameraScreen> {
-  late CameraController _controller;
+  CameraController? _controller;
   bool _isReady = false;
+  String? _error;
+
+  /// Browsers have no usable in-page camera preview here, so the web build
+  /// hands straight over to the system picker, which on iOS and Android opens
+  /// the real camera.
+  bool get _useSystemPicker => kIsWeb;
 
   @override
   void initState() {
     super.initState();
-    _initCamera();
+    if (_useSystemPicker) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _pick(ImageSource.camera);
+      });
+    } else {
+      _initCamera();
+    }
   }
 
   Future<void> _initCamera() async {
-    final cameras = await availableCameras();
-    _controller = CameraController(cameras[0], ResolutionPreset.medium);
-    await _controller.initialize();
-    if (mounted) setState(() => _isReady = true);
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        if (mounted) setState(() => _error = 'No camera on this device.');
+        return;
+      }
+      final controller = CameraController(cameras.first, ResolutionPreset.medium);
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _controller = controller;
+        _isReady = true;
+      });
+    } catch (e) {
+      // A denied permission or a busy camera must not leave a dead spinner.
+      if (mounted) setState(() => _error = '$e');
+    }
   }
 
   @override
   void dispose() {
-    if (_isReady) _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
-  Future<void> _pickFromGallery() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 90,
-    );
-    if (picked != null && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PreviewScreen(
-            photoPath: picked.path,
-            groupId: widget.groupId,
-            ritualId: widget.ritualId,
-            completionValue: widget.completionValue,
-          ),
-        ),
+  Future<void> _pick(ImageSource source) async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 90,
       );
+      if (picked == null) {
+        // Cancelled. On web there is nothing behind this screen to show.
+        if (_useSystemPicker && mounted) Navigator.of(context).pop();
+        return;
+      }
+      if (mounted) _openPreview(picked.path, replace: true);
+    } catch (e) {
+      if (mounted) setState(() => _error = '$e');
+    }
+  }
+
+  void _openPreview(String path, {bool replace = false}) {
+    final route = MaterialPageRoute<void>(
+      builder: (_) => PreviewScreen(
+        photoPath: path,
+        groupId: widget.groupId,
+        ritualId: widget.ritualId,
+        completionValue: widget.completionValue,
+      ),
+    );
+    if (replace) {
+      Navigator.pushReplacement(context, route);
+    } else {
+      Navigator.push(context, route);
+    }
+  }
+
+  Future<void> _shoot() async {
+    final controller = _controller;
+    if (controller == null) return;
+    try {
+      final photo = await controller.takePicture();
+      if (mounted) _openPreview(photo.path);
+    } catch (e) {
+      if (mounted) setState(() => _error = '$e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_error != null) return _errorScaffold(context);
+
     if (!_isReady) {
       return Scaffold(
         appBar: AppBar(title: const Text('Camera'), centerTitle: true),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -91,41 +147,24 @@ class _CameraScreenState extends State<CameraScreen> {
                     padding: const EdgeInsets.all(8),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: CameraPreview(_controller),
+                      child: CameraPreview(_controller!),
                     ),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 32, left: 32, right: 32),
+                  padding:
+                      const EdgeInsets.only(bottom: 32, left: 32, right: 32),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Gallery picker
                       IconButton(
-                        onPressed: _pickFromGallery,
-                        icon: const Icon(Icons.photo_library_outlined,
-                            color: Colors.white, size: 32),
+                        onPressed: () => _pick(ImageSource.gallery),
+                        icon: const Icon(LucideIcons.images,
+                            color: Colors.white, size: 30),
                         tooltip: 'Pick from gallery',
                       ),
-                      // Shutter button
                       GestureDetector(
-                        onTap: () async {
-                          final photo = await _controller.takePicture();
-                          if (context.mounted) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PreviewScreen(
-                                  photoPath: photo.path,
-                                  groupId: widget.groupId,
-                                  ritualId: widget.ritualId,
-                                  completionValue: widget.completionValue,
-                                ),
-                              ),
-                            );
-                          }
-                        },
+                        onTap: _shoot,
                         child: Container(
                           width: 72,
                           height: 72,
@@ -142,13 +181,63 @@ class _CameraScreenState extends State<CameraScreen> {
                           ),
                         ),
                       ),
-                      // Spacer to balance the row
                       const SizedBox(width: 48),
                     ],
                   ),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _errorScaffold(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Camera'), centerTitle: true),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.cameraOff,
+                  size: 44, color: theme.colorScheme.error),
+              const SizedBox(height: 16),
+              Text('Cannot open the camera',
+                  style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                _error ?? '',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => _pick(ImageSource.gallery),
+                icon: const Icon(LucideIcons.images, size: 18),
+                label: const Text('Choose a photo instead'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _error = null;
+                    _isReady = false;
+                  });
+                  if (_useSystemPicker) {
+                    _pick(ImageSource.camera);
+                  } else {
+                    _initCamera();
+                  }
+                },
+                child: const Text('Try again'),
+              ),
+            ],
           ),
         ),
       ),

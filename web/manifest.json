@@ -1,11 +1,11 @@
 {
-    "name": "rituals",
-    "short_name": "rituals",
+    "name": "Rituals",
+    "short_name": "Rituals",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FBFDF8",
+    "theme_color": "#1DB954",
+    "description": "Habit tracker with photo proof. Solo or shared.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
