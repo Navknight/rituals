@@ -1,0 +1,7 @@
+0.1.3
+
+A tidy-up release.
+
+- Signing in with Google no longer does the work twice behind the scenes.
+- Removed code and libraries the app was carrying but never used, so the
+  download is a little smaller.
