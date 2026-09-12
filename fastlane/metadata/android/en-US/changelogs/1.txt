@@ -1,1 +1,13 @@
-First release.
+First public build (0.1.0).
+
+Early release. Nobody has used this on a real device yet, so expect rough
+edges and please report anything that breaks.
+
+- Track habits on your own, no account and no group needed
+- A day counts once you attach a photo
+- Check, count and timer habits
+- Weekday, times-per-week and every-N-days schedules
+- Skip days that hold a streak without extending it
+- Streaks, consistency score, heatmap and charts
+- Optional shared spaces with invite codes and nudges
+- Light and dark themes

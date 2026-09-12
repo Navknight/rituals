@@ -350,13 +350,24 @@ export const cleanupRelayPhotos = onSchedule("every 24 hours", async () => {
 export const capSpending = onMessagePublished(
   {topic: "billing-alerts", retry: false},
   async (event) => {
-    const data = event.data.message.json as {
-      costAmount?: number;
-      budgetAmount?: number;
-    };
+    // Decode the payload by hand rather than relying on the `json` getter,
+    // which is not populated for every message shape.
+    let data: {costAmount?: number; budgetAmount?: number} = {};
+    try {
+      const raw = event.data?.message?.data;
+      if (raw) {
+        data = JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
+      } else if (event.data?.message?.json) {
+        data = event.data.message.json;
+      }
+    } catch (err) {
+      console.error("Could not parse budget message:", err);
+      return;
+    }
 
     const cost = data.costAmount ?? 0;
     const budget = data.budgetAmount ?? 0;
+    console.log(`Budget message: cost=${cost} budget=${budget}`);
 
     if (cost <= budget) {
       console.log(`Spend ${cost} is within budget ${budget}.`);
