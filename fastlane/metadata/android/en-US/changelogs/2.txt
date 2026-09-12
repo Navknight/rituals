@@ -16,5 +16,8 @@ Fixes from the first real device testing.
 - Switching spaces had no effect on what was shown.
 - The notification banner stayed after permission was granted.
 - A solo log no longer calls itself sharing.
+- Signing in with Google is the main option again. Guest was prominent
+  enough that reinstalling and tapping it created a new empty identity,
+  and the wording wrongly implied guest data survived a reinstall.
 - Photos are kept on the device that took them, so a web user keeps their
   history even after the relay is pruned.
