@@ -1,10 +1,12 @@
 import {setGlobalOptions} from "firebase-functions";
+import {onMessagePublished} from "firebase-functions/v2/pubsub";
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {getFirestore} from "firebase-admin/firestore";
 import {getMessaging} from "firebase-admin/messaging";
 import {getStorage} from "firebase-admin/storage";
 import {initializeApp} from "firebase-admin/app";
+import {CloudBillingClient} from "@google-cloud/billing";
 
 initializeApp();
 setGlobalOptions({maxInstances: 10});
@@ -340,3 +342,49 @@ export const cleanupRelayPhotos = onSchedule("every 24 hours", async () => {
     `Now ~${(remaining / 1024 / 1024).toFixed(1)} MB used`
   );
 });
+
+// Hard spending cap. A Cloud Billing budget publishes to the billing-alerts
+// topic; when actual spend passes the budget this detaches the billing account
+// from the project, which stops every billable service. A budget alert only
+// reports that money was spent. This stops it being spent.
+export const capSpending = onMessagePublished(
+  {topic: "billing-alerts", retry: false},
+  async (event) => {
+    const data = event.data.message.json as {
+      costAmount?: number;
+      budgetAmount?: number;
+    };
+
+    const cost = data.costAmount ?? 0;
+    const budget = data.budgetAmount ?? 0;
+
+    if (cost <= budget) {
+      console.log(`Spend ${cost} is within budget ${budget}.`);
+      return;
+    }
+
+    const projectId = process.env.GCLOUD_PROJECT;
+    if (!projectId) {
+      console.error("GCLOUD_PROJECT unset, cannot disable billing.");
+      return;
+    }
+
+    const name = `projects/${projectId}`;
+    const billing = new CloudBillingClient();
+
+    const [info] = await billing.getProjectBillingInfo({name});
+    if (!info.billingAccountName) {
+      console.log("Billing is already disabled.");
+      return;
+    }
+
+    await billing.updateProjectBillingInfo({
+      name,
+      projectBillingInfo: {billingAccountName: ""},
+    });
+
+    console.error(
+      `BILLING DISABLED for ${projectId}: ${cost} exceeded budget ${budget}.`
+    );
+  }
+);

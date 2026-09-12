@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -38,6 +39,32 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
+/// reCAPTCHA v3 site key for App Check on web. Pass it at build time with
+/// --dart-define=RECAPTCHA_SITE_KEY=... ; App Check is skipped on web without
+/// it so a local build still runs.
+const _recaptchaSiteKey = String.fromEnvironment('RECAPTCHA_SITE_KEY');
+
+/// Blocks requests that do not come from a genuine build of this app, so a
+/// leaked API key cannot be used to run up the project's bill.
+Future<void> _activateAppCheck() async {
+  try {
+    if (kIsWeb && _recaptchaSiteKey.isEmpty) {
+      debugPrint('[main] App Check skipped on web: no reCAPTCHA site key.');
+      return;
+    }
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid:
+          kDebugMode ? AndroidDebugProvider() : AndroidPlayIntegrityProvider(),
+      providerApple: kDebugMode ? AppleDebugProvider() : AppleAppAttestProvider(),
+      providerWeb:
+          kIsWeb ? ReCaptchaV3Provider(_recaptchaSiteKey) : null,
+    );
+  } catch (e) {
+    // Never block startup on App Check.
+    debugPrint('[main] App Check activation failed: $e');
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -54,6 +81,7 @@ void main() async {
         persistenceEnabled: true,
         cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
       );
+      await _activateAppCheck();
     }
   } catch (e) {
     debugPrint('[main] Firebase init failed: $e');
