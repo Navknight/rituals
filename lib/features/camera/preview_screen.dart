@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:camera/camera.dart' show XFile;
+import 'package:cross_file/cross_file.dart' show XFile;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,6 +33,10 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Nothing is shared in a space of one, so do not call it sharing there.
+    final shared =
+        ref.watch(groupProvider(widget.groupId)).value?.isPersonal == false;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Preview'),
@@ -68,7 +72,7 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
                   child: TextField(
                     controller: captionController,
                     decoration: const InputDecoration(
-                      labelText: 'Add a caption...',
+                      labelText: 'Add a note',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.chat_bubble_outline),
                     ),
@@ -100,8 +104,12 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Icon(Icons.send),
-                          label: Text(_saving ? 'Saving...' : 'Share'),
+                              : Icon(shared ? Icons.send : Icons.check),
+                          label: Text(
+                            _saving
+                                ? 'Saving...'
+                                : (shared ? 'Share' : 'Mark done'),
+                          ),
                         ),
                       ),
                     ],
