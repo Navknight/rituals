@@ -1,0 +1,3 @@
+0.1.5
+
+- Settings now shows the version you actually have installed.
