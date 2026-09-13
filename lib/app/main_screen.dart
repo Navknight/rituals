@@ -18,6 +18,8 @@ import 'package:rituals/features/streaks/ritual_detail_screen.dart';
 import 'package:rituals/models/ritual.dart';
 import 'package:rituals/services/notification_service.dart';
 import 'package:rituals/services/restore_service.dart';
+import 'package:rituals/services/update_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key, required this.groupId});
@@ -64,6 +66,26 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) RestoreService().processPendingRequests([widget.groupId]);
     });
+  
+    unawaited(_checkForUpdate());
+  }
+
+  Future<void> _checkForUpdate() async {
+    final update = await UpdateService().check();
+    if (update == null || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Version ${update.version} is available.'),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          label: 'Download',
+          onPressed: () => launchUrl(
+            Uri.parse(update.url),
+            mode: LaunchMode.externalApplication,
+          ),
+        ),
+      ),
+    );
   }
 
   /// Picks up a photo taken just before Android killed the app, which would

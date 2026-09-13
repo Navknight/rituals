@@ -34,6 +34,11 @@ Settings > Secrets and variables > Actions > New repository secret. Create:
 
 The `release.yml` workflow builds signed APKs (split per ABI plus a
 universal build) and attaches them to a GitHub Release automatically.
+It also builds the web app and deploys it to Firebase Hosting, which needs a
+`FIREBASE_SERVICE_ACCOUNT` secret: the JSON key of a service account with the
+Firebase Hosting Admin role (Firebase console > Project settings > Service
+accounts > Generate new private key). Installed Android apps notice the new
+GitHub release on their next open and offer the download.
 
 ## Submitting to IzzyOnDroid
 

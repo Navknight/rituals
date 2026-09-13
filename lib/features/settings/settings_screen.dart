@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:rituals/services/update_service.dart';
 import 'package:rituals/app/theme.dart';
 import 'package:rituals/core/providers.dart';
 import 'package:rituals/core/settings_provider.dart';
@@ -186,11 +187,7 @@ class SettingsScreen extends ConsumerWidget {
             title: Text('Rituals'),
             subtitle: Text('Track the habits you care about, alone or together.'),
           ),
-          const ListTile(
-            title: Text('Version'),
-            // Filled in by flutter from pubspec.yaml at build time.
-            subtitle: Text(String.fromEnvironment('FLUTTER_BUILD_NAME')),
-          ),
+          const ListTile(title: Text('Version'), subtitle: Text(appVersion)),
         ],
       ),
     );
