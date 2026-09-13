@@ -3,7 +3,7 @@
     "short_name": "Rituals",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FBFDF8",
+    "background_color": "#000000",
     "theme_color": "#1DB954",
     "description": "Habit tracker with photo proof. Solo or shared.",
     "orientation": "portrait-primary",
