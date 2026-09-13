@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/models/ritual_entry.dart';
 import 'package:rituals/services/local_photo_store.dart';
+import 'package:rituals/services/restore_service.dart';
 
 /// Shows a ritual photo, preferring the copy held on this device.
 ///
@@ -13,12 +14,14 @@ class EntryPhoto extends StatefulWidget {
   const EntryPhoto({
     super.key,
     required this.entry,
+    required this.groupId,
     this.fit = BoxFit.cover,
     this.width,
     this.height,
   });
 
   final RitualEntry entry;
+  final String groupId;
   final BoxFit fit;
   final double? width;
   final double? height;
@@ -83,7 +86,23 @@ class _EntryPhotoState extends State<EntryPhoto> {
       height: widget.height,
       loadingBuilder: (context, child, progress) =>
           progress == null ? child : _placeholder(context, spinning: true),
-      errorBuilder: (context, _, _) => _placeholder(context, gone: true),
+      errorBuilder: (context, _, _) {
+        _requestRestore(url);
+        return _placeholder(context, gone: true);
+      },
+    );
+  }
+
+  /// Entry ids already asked for this session, so rebuilds don't rewrite it.
+  static final _requested = <String>{};
+
+  void _requestRestore(String url) {
+    if (!_requested.add(widget.entry.id)) return;
+    RestoreService().requestRestore(
+      groupId: widget.groupId,
+      ritualId: widget.entry.ritualId,
+      entryId: widget.entry.id,
+      originalUrl: url,
     );
   }
 

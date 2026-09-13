@@ -1,9 +1,9 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:rituals/services/local_photo_store.dart';
 
 class RestoreService {
   final _firestore = FirebaseFirestore.instance;
@@ -37,8 +37,7 @@ class RestoreService {
   }
 
   /// Called on app open. For each pending restore request in our groups:
-  /// - Android: checks for local file, re-uploads if found
-  /// - Web: fetches original URL (service worker serves from cache if available)
+  /// Re-uploads any requested photo this device still holds.
   Future<void> processPendingRequests(List<String> groupIds) async {
     if (groupIds.isEmpty) return;
 
@@ -78,8 +77,6 @@ class RestoreService {
       final entryDoc = await _firestore
           .collection('groups')
           .doc(groupId)
-          .collection('rituals')
-          .doc(ritualId)
           .collection('entries')
           .doc(entryId)
           .get();
@@ -90,27 +87,18 @@ class RestoreService {
         return;
       }
 
-      Uint8List? bytes;
-
-      if (!kIsWeb) {
-        // Android: check for the local file saved at capture time
-        final localPath = entryDoc.data()?['localPath'] as String?;
-        if (localPath != null && localPath.isNotEmpty) {
-          final file = File(localPath);
-          if (file.existsSync()) {
-            bytes = await file.readAsBytes();
-          }
-        }
-      } else {
-        // Web: fetch the original URL. The service worker intercepts this and
-        // serves from its cache if the photo was ever viewed on this device.
+      // The owner holds the original; on web, any member who viewed the photo
+      // has it in the service worker cache, which serves this fetch.
+      var bytes = await LocalPhotoStore.instance.bytesFor(
+        entryId: entryId,
+        localPath: entryDoc.data()?['localPath'] as String?,
+      );
+      if (bytes == null && kIsWeb) {
         try {
           final response = await http.get(Uri.parse(originalUrl));
-          if (response.statusCode == 200) {
-            bytes = response.bodyBytes;
-          }
+          if (response.statusCode == 200) bytes = response.bodyBytes;
         } catch (_) {
-          // Not cached / network error — this device can't help
+          // Not cached here — this device can't help.
         }
       }
 
@@ -127,8 +115,6 @@ class RestoreService {
       await _firestore
           .collection('groups')
           .doc(groupId)
-          .collection('rituals')
-          .doc(ritualId)
           .collection('entries')
           .doc(entryId)
           .update({'photoUrl': newUrl});

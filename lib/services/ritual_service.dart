@@ -38,15 +38,6 @@ class RitualService {
     await _rituals(groupId).doc(ritualId).update({'archived': archived});
   }
 
-  /// Persists a hand-ordered list.
-  Future<void> reorder(String groupId, List<Ritual> ordered) async {
-    final batch = firestore.batch();
-    for (var i = 0; i < ordered.length; i++) {
-      batch.update(_rituals(groupId).doc(ordered[i].id), {'sortOrder': i});
-    }
-    await batch.commit();
-  }
-
   Future<void> deleteRitual(String groupId, String ritualId) async {
     final logs =
         await _entries(groupId).where('ritualId', isEqualTo: ritualId).get();
@@ -62,11 +53,7 @@ class RitualService {
     return _rituals(groupId).snapshots().map((snapshot) {
       final rituals =
           snapshot.docs.map((doc) => Ritual.fromMap(doc.data())).toList();
-      rituals.sort((a, b) {
-        final byOrder = a.sortOrder.compareTo(b.sortOrder);
-        if (byOrder != 0) return byOrder;
-        return a.createdAt.compareTo(b.createdAt);
-      });
+      rituals.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       return rituals;
     });
   }

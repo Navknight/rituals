@@ -624,6 +624,7 @@ class _PhotosStrip extends ConsumerWidget {
               borderRadius: BorderRadius.circular(12),
               child: EntryPhoto(
                 entry: entry,
+                groupId: groupId,
                 width: 96,
                 height: 96,
               ),
@@ -648,7 +649,11 @@ class _PhotosStrip extends ConsumerWidget {
               children: [
                 Flexible(
                   child: InteractiveViewer(
-                    child: EntryPhoto(entry: entry, fit: BoxFit.contain),
+                    child: EntryPhoto(
+                      entry: entry,
+                      groupId: groupId,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
                 Padding(

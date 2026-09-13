@@ -70,7 +70,6 @@ class Ritual {
   final bool requirePhoto;
 
   final bool archived;
-  final int sortOrder;
 
   /// ARGB accent used for this ritual's chart and heatmap.
   final int colorValue;
@@ -94,7 +93,6 @@ class Ritual {
     this.reminderOffsetMinutes = 0,
     this.requirePhoto = true,
     this.archived = false,
-    this.sortOrder = 0,
     this.colorValue = 0xFF1DB954,
     required this.createdBy,
     required this.createdAt,
@@ -184,7 +182,6 @@ class Ritual {
     bool clearReminder = false,
     bool? requirePhoto,
     bool? archived,
-    int? sortOrder,
     int? colorValue,
   }) {
     return Ritual(
@@ -205,7 +202,6 @@ class Ritual {
           reminderOffsetMinutes ?? this.reminderOffsetMinutes,
       requirePhoto: requirePhoto ?? this.requirePhoto,
       archived: archived ?? this.archived,
-      sortOrder: sortOrder ?? this.sortOrder,
       colorValue: colorValue ?? this.colorValue,
       createdBy: createdBy,
       createdAt: createdAt,
@@ -237,7 +233,6 @@ class Ritual {
           (map['reminderOffsetMinutes'] as num?)?.toInt() ?? 0,
       requirePhoto: map['requirePhoto'] as bool? ?? true,
       archived: map['archived'] as bool? ?? false,
-      sortOrder: (map['sortOrder'] as num?)?.toInt() ?? 0,
       colorValue: (map['colorValue'] as num?)?.toInt() ?? 0xFF1DB954,
       createdBy: map['createdBy'] as String? ?? '',
       createdAt:
@@ -262,7 +257,6 @@ class Ritual {
       'reminderOffsetMinutes': reminderOffsetMinutes,
       'requirePhoto': requirePhoto,
       'archived': archived,
-      'sortOrder': sortOrder,
       'colorValue': colorValue,
       'createdBy': createdBy,
       'createdAt': Timestamp.fromDate(createdAt),

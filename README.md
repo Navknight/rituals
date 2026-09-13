@@ -137,8 +137,8 @@ When a device cannot load a photo it writes a restore request to Firestore. The
 next time any member of that space opens the app, their device checks for pending
 requests and re-uploads the photo if it has it, then updates the link. Everyone
 watching sees the new URL arrive live. The original poster is the most reliable
-source since the photo is saved to their device at capture time. Firebase
-coordinates the exchange; devices never talk to each other directly.
+source since the photo is saved to their device at capture time; on web, anyone
+who has viewed it holds a cached copy too. Firebase coordinates the exchange; devices never talk to each other directly.
 
 ## Home screen widget
 

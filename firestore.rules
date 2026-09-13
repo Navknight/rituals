@@ -70,6 +70,10 @@ service cloud.firestore {
         allow read: if isGroupMember(groupId);
         allow create, update: if isGroupMember(groupId)
           && request.resource.data.userId == request.auth.uid;
+        // Any member may restore a lost photo by re-pointing its link.
+        allow update: if isGroupMember(groupId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['photoUrl']);
         allow delete: if isGroupMember(groupId)
           && resource.data.userId == request.auth.uid;
       }
