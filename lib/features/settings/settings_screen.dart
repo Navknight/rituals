@@ -186,7 +186,11 @@ class SettingsScreen extends ConsumerWidget {
             title: Text('Rituals'),
             subtitle: Text('Track the habits you care about, alone or together.'),
           ),
-          const ListTile(title: Text('Version'), subtitle: Text('0.1.1')),
+          const ListTile(
+            title: Text('Version'),
+            // Filled in by flutter from pubspec.yaml at build time.
+            subtitle: Text(String.fromEnvironment('FLUTTER_BUILD_NAME')),
+          ),
         ],
       ),
     );
