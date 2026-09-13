@@ -88,7 +88,7 @@ class SettingsScreen extends ConsumerWidget {
                 final accent = AccentColor.values[index];
                 final selected = settings.accent == accent;
                 final accentColor =
-                    buildTheme(accent, Brightness.light).colorScheme.primary;
+                    accent.color;
                 return Tooltip(
                   message: accent.label,
                   child: InkWell(
