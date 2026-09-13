@@ -1,0 +1,6 @@
+0.1.7
+
+This version is signed with a new key. If you already have Rituals installed,
+uninstall it first, then install this version.
+
+- New green flame icon.
