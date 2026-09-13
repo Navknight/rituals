@@ -156,6 +156,13 @@ const REMINDER_LINES: Record<string, string[]> = {
   ],
 };
 
+/**
+ * Picks a reminder line in the user's commentary tone.
+ * @param {string} tone The user's commentary tone.
+ * @param {boolean} allowProfanity Whether swearing lines may be used.
+ * @param {string} ritual Ritual title to fill in.
+ * @return {string} The reminder text.
+ */
 function reminderBody(
   tone: string | undefined,
   allowProfanity: boolean,
@@ -169,6 +176,11 @@ function reminderBody(
   return line.replace("{ritual}", ritual);
 }
 
+/**
+ * Local yyyy-MM-dd key, matching RitualEntry.dayKey in the app.
+ * @param {Date} date The local date.
+ * @return {string} The day key.
+ */
 function dayKey(date: Date): string {
   const y = date.getFullYear();
   const m = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -176,6 +188,12 @@ function dayKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * Mirrors Ritual.isDueOn in the app; keep the two in step.
+ * @param {object} ritual The ritual document.
+ * @param {Date} local The local date to check.
+ * @return {boolean} Whether the ritual is due that day.
+ */
 function isDueOn(ritual: FirebaseFirestore.DocumentData, local: Date): boolean {
   const weekday = local.getDay() === 0 ? 7 : local.getDay();
   const scheduleType = ritual.scheduleType ?? "weekdays";
@@ -316,7 +334,8 @@ export const cleanupRelayPhotos = onSchedule("every 24 hours", async () => {
     return sum + parseInt((file.metadata.size as string) ?? "0", 10);
   }, 0);
 
-  const limitBytes = 900 * 1024 * 1024; // 900 MB — 100 MB headroom on 1 GB free tier
+  // 900 MB leaves 100 MB headroom on the 1 GB free tier.
+  const limitBytes = 900 * 1024 * 1024;
 
   if (totalBytes <= limitBytes) {
     console.log(`Storage OK: ${(totalBytes / 1024 / 1024).toFixed(1)} MB used`);
@@ -338,7 +357,8 @@ export const cleanupRelayPhotos = onSchedule("every 24 hours", async () => {
 
   await Promise.all(toDelete.map((file) => file.delete()));
   console.log(
-    `FIFO cleanup: deleted ${toDelete.length} files, freed ${(freed / 1024 / 1024).toFixed(1)} MB. ` +
+    `FIFO cleanup: deleted ${toDelete.length} files, ` +
+    `freed ${(freed / 1024 / 1024).toFixed(1)} MB. ` +
     `Now ~${(remaining / 1024 / 1024).toFixed(1)} MB used`
   );
 });
