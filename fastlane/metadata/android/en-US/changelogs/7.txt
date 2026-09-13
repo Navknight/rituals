@@ -1,0 +1,3 @@
+0.1.6
+
+- The app now tells you when a new version is out, with a link to download it.
