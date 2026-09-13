@@ -1,0 +1,8 @@
+0.1.4
+
+A new look.
+
+- Flatter, simpler design: plain white or true black backgrounds, grey
+  cards and one accent colour, with Ente's green as the default.
+- Photos that fail to load are now restored by whoever in the space still
+  has a copy, the next time they open the app.
