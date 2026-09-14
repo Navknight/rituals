@@ -27,7 +27,8 @@ class SpacesScreen extends ConsumerWidget {
             return const Center(child: Text('Not signed in'));
           }
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            padding: EdgeInsets.fromLTRB(
+              16, 16, 16, 32 + MediaQuery.paddingOf(context).bottom),
             children: [
               _SectionLabel('Personal'),
               const SizedBox(height: 8),
@@ -500,7 +501,8 @@ class _InviteSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+      padding: EdgeInsets.fromLTRB(
+          20, 24, 20, 32 + MediaQuery.paddingOf(context).bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

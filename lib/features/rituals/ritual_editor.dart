@@ -37,7 +37,9 @@ Future<void> showRitualEditor(
     builder: (sheetContext) {
       return Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          // Clear the 3-button nav bar too, or it covers the sheet's end.
+          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom +
+              MediaQuery.paddingOf(sheetContext).bottom,
         ),
         child: _RitualEditorSheet(groupId: groupId, existing: existing),
       );
@@ -122,7 +124,9 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
             BorderRadius.vertical(top: Radius.circular(Corners.sheet)),
       ),
       builder: (sheetContext) {
-        return SizedBox(
+        return SafeArea(
+          top: false,
+          child: SizedBox(
           height: 420,
           child: EmojiPicker(
             onEmojiSelected: (category, emoji) {
@@ -132,6 +136,7 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
               height: 380,
               emojiViewConfig: const EmojiViewConfig(columns: 8),
             ),
+          ),
           ),
         );
       },
@@ -647,7 +652,9 @@ Future<double?> showLogAmountSheet(
     builder: (sheetContext) {
       return Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          // Clear the 3-button nav bar too, or it covers the sheet's end.
+          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom +
+              MediaQuery.paddingOf(sheetContext).bottom,
         ),
         child: _LogAmountSheet(ritual: ritual, value: value, target: target),
       );
