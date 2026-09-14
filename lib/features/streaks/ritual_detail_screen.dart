@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:rituals/shared/recent_days.dart';
 import 'package:rituals/app/theme.dart';
 import 'package:rituals/core/providers.dart';
 import 'package:rituals/core/settings_provider.dart';
@@ -51,7 +52,8 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${ritual.emoji} ${ritual.title}'),
+        // The hero below names the ritual; the bar stays clear, as in Ente.
+        title: null,
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.pencil),
@@ -169,6 +171,26 @@ class _RitualDetailBody extends ConsumerWidget {
                   today: today,
                 ),
               ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: RecentDaysStrip(
+                  groupId: groupId,
+                  ritual: ritual,
+                  entries: entries,
+                  days: info.days,
+                  onTapPhoto: (entry) => _PhotosStrip.openPhoto(
+                    context,
+                    groupId,
+                    entry,
+                  ),
+                ),
+              ),
               const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -262,7 +284,7 @@ class _RitualDetailBody extends ConsumerWidget {
                 ritual: ritual,
                 entries: entries,
               ),
-              const SizedBox(height: 32),
+              SizedBox(height: 32 + MediaQuery.paddingOf(context).bottom),
             ],
           ),
         ),
@@ -391,41 +413,70 @@ class _StreakHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = Color(ritual.colorValue);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
       child: Column(
         children: [
+          Container(
+            width: 172,
+            height: 172,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              shape: BoxShape.circle,
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Text(
+                  '$streak',
+                  style: TextStyle(
+                    fontSize: 76,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -3,
+                    height: 1,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const Positioned(
+                  right: -22,
+                  bottom: -6,
+                  child: Icon(LucideIcons.zap, size: 34, color: streakBolt),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(LucideIcons.flame, size: 36, color: accent),
-              const SizedBox(width: 8),
-              Text(
-                '$streak',
-                style: TextStyle(
-                  fontSize: 64,
-                  fontWeight: FontWeight.w900,
-                  color: scheme.onSurface,
-                  height: 1,
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(ritual.emoji, style: const TextStyle(fontSize: 20)),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  ritual.title,
+                  style: Theme.of(context).textTheme.titleLarge,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
-            'day streak',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            ritual.scheduleLabel,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            streak == 1 ? '1 day streak' : '$streak day streak',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -635,7 +686,10 @@ class _PhotosStrip extends ConsumerWidget {
     );
   }
 
-  void _openPhoto(BuildContext context, WidgetRef ref, RitualEntry entry) {
+  void _openPhoto(BuildContext context, WidgetRef ref, RitualEntry entry) =>
+      openPhoto(context, groupId, entry);
+
+  static void openPhoto(BuildContext context, String groupId, RitualEntry entry) {
     showDialog<void>(
       context: context,
       builder: (context) => Dialog(

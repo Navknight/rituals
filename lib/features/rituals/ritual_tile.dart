@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/app/theme.dart';
 import 'package:rituals/features/rituals/ritual_controller.dart';
 import 'package:rituals/models/ritual.dart';
+import 'package:rituals/shared/recent_days.dart';
 
 /// A ritual on the Today list.
 ///
@@ -22,6 +23,8 @@ class RitualTile extends StatelessWidget {
     required this.onAdd,
     required this.onAdjust,
     this.trailing,
+    this.streak = 0,
+    this.footer,
   });
 
   final Ritual ritual;
@@ -38,6 +41,12 @@ class RitualTile extends StatelessWidget {
   final VoidCallback onAdjust;
 
   final Widget? trailing;
+
+  /// Current streak, shown as a bolt chip.
+  final int streak;
+
+  /// Shown under the header, e.g. the recent days strip.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -71,16 +80,24 @@ class RitualTile extends StatelessWidget {
         ],
       ),
       child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-        color: done
-            ? accent.withValues(alpha: 0.10)
-            : theme.colorScheme.surfaceContainerLow,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        color: theme.colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: done
+                ? accent.withValues(alpha: 0.45)
+                : theme.colorScheme.outlineVariant,
+          ),
+        ),
         child: InkWell(
           onTap: onOpen,
-          borderRadius: BorderRadius.circular(Corners.card),
+          borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+            child: Column(
+              children: [
+            Row(
               children: [
                 _ProgressRing(
                   ritual: ritual,
@@ -124,6 +141,10 @@ class RitualTile extends StatelessWidget {
                   const SizedBox(width: 8),
                   trailing!,
                 ],
+                if (streak > 0) ...[
+                  const SizedBox(width: 8),
+                  StreakChip(streak: streak),
+                ],
                 if (ritual.type != RitualType.check && !skipped)
                   // Long press corrects the running total. Without it a count
                   // ritual could only ever go up.
@@ -146,6 +167,15 @@ class RitualTile extends StatelessWidget {
                       style: IconButton.styleFrom(foregroundColor: accent),
                     ),
                   ),
+              ],
+            ),
+            if (footer != null) ...[
+              const SizedBox(height: 14),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: footer!,
+              ),
+            ],
               ],
             ),
           ),

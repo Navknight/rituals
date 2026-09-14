@@ -580,10 +580,18 @@ class MonthCalendar extends StatelessWidget {
                         final date = DateTime(month.year, month.month, dayNum);
                         final result = days[RitualEntry.dayKey(date)];
                         final isToday = date == today;
-                        final color = result == null
-                            ? scheme.emptyColor
-                            : dayStatusColor(
-                                result.status, result.progress, scheme, accent);
+                        final done = result?.status == DayStatus.done;
+                        // Done days are solid bolt tiles, as in Ente; the rest
+                        // stay quiet so the run of tiles reads at a glance.
+                        final color = done
+                            ? accent
+                            : result == null ||
+                                    result.status == DayStatus.missed ||
+                                    result.status == DayStatus.notDue ||
+                                    result.status == DayStatus.outOfRange
+                                ? Colors.transparent
+                                : dayStatusColor(result.status,
+                                    result.progress, scheme, accent);
                         return Padding(
                           padding: const EdgeInsets.all(2),
                           child: AspectRatio(
@@ -593,20 +601,27 @@ class MonthCalendar extends StatelessWidget {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: color,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: isToday
-                                      ? Border.all(color: accent, width: 2)
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: isToday && !done
+                                      ? Border.all(color: scheme.outlineVariant)
                                       : null,
                                 ),
                                 child: Center(
-                                  child: Text(
-                                    '$dayNum',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: scheme.onSurface,
-                                    ),
-                                  ),
+                                  child: done
+                                      ? const Icon(Icons.bolt,
+                                          color: Colors.white, size: 20)
+                                      : isToday
+                                          ? const Icon(Icons.bolt,
+                                              color: Color(0xFFFFBC03),
+                                              size: 20)
+                                          : Text(
+                                              '$dayNum',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                                color: scheme.onSurfaceVariant,
+                                              ),
+                                            ),
                                 ),
                               ),
                             ),

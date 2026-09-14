@@ -18,6 +18,7 @@ class EntryPhoto extends StatefulWidget {
     this.fit = BoxFit.cover,
     this.width,
     this.height,
+    this.cacheWidth,
   });
 
   final RitualEntry entry;
@@ -25,6 +26,9 @@ class EntryPhoto extends StatefulWidget {
   final BoxFit fit;
   final double? width;
   final double? height;
+
+  /// Decode width in pixels, so small thumbnails don't hold full photos.
+  final int? cacheWidth;
 
   @override
   State<EntryPhoto> createState() => _EntryPhotoState();
@@ -68,6 +72,7 @@ class _EntryPhotoState extends State<EntryPhoto> {
             fit: widget.fit,
             width: widget.width,
             height: widget.height,
+            cacheWidth: widget.cacheWidth,
           );
         }
         return _network(context);
@@ -84,6 +89,7 @@ class _EntryPhotoState extends State<EntryPhoto> {
       fit: widget.fit,
       width: widget.width,
       height: widget.height,
+      cacheWidth: widget.cacheWidth,
       loadingBuilder: (context, child, progress) =>
           progress == null ? child : _placeholder(context, spinning: true),
       errorBuilder: (context, _, _) {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:rituals/services/widget_service.dart';
+import 'package:rituals/shared/recent_days.dart';
 import 'package:rituals/core/providers.dart';
 import 'package:rituals/core/settings_provider.dart';
 import 'package:rituals/features/commentary/commentary.dart';
@@ -74,6 +76,7 @@ class HomeScreen extends ConsumerWidget {
         final doneCount = due
             .where((r) => DayProgress.from(r, entries[r.id]).isDone)
             .length;
+        _feedWidgets(ref, due, entries, doneCount);
 
         final sections = <Widget>[];
 
@@ -159,6 +162,48 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
+  static String? _lastWidgetPayload;
+
+  /// Keeps the Today and Streak home screen widgets current. Build runs often,
+  /// so only a changed summary is written.
+  void _feedWidgets(
+    WidgetRef ref,
+    List<Ritual> due,
+    Map<String, List<RitualEntry>> entries,
+    int doneCount,
+  ) {
+    final history = ref.read(spaceEntriesProvider(groupId)).value;
+    if (history == null) return;
+    final streaks = ref.read(streakServiceProvider);
+    var top = 0;
+    var topLabel = '';
+    for (final r in due) {
+      final streak = streaks
+          .analyse(ritual: r, entries: history[r.id] ?? const [])
+          .currentStreak;
+      if (streak > top) {
+        top = streak;
+        topLabel = '${r.emoji} ${r.title}';
+      }
+    }
+    final lines = [
+      for (final r in due)
+        '${DayProgress.from(r, entries[r.id]).isDone ? '✓' : '○'} ${r.emoji} ${r.title}',
+    ];
+    final space = ref.read(groupProvider(groupId)).value?.name ?? 'Rituals';
+    final payload = '$space|$doneCount|$top|$topLabel|${lines.join('\n')}';
+    if (payload == _lastWidgetPayload) return;
+    _lastWidgetPayload = payload;
+    WidgetService().updateSummary(
+      space: space,
+      done: doneCount,
+      due: due.length,
+      lines: lines,
+      topStreak: top,
+      topStreakRitual: topLabel,
+    );
+  }
+
   List<Widget> _section(
     BuildContext context,
     WidgetRef ref,
@@ -169,37 +214,56 @@ class HomeScreen extends ConsumerWidget {
   }) {
     if (rituals.isEmpty) return const [];
     final theme = Theme.of(context);
+    // Already streamed for the Progress tab, so the strip costs no extra reads.
+    final history = ref.watch(spaceEntriesProvider(groupId)).value ?? const {};
+    final streaks = ref.read(streakServiceProvider);
 
     return [
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
         child: Text(
-          title.toUpperCase(),
-          style: theme.textTheme.labelMedium?.copyWith(
+          title,
+          style: theme.textTheme.titleSmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
-            letterSpacing: 1,
-            fontWeight: FontWeight.w700,
           ),
         ),
       ),
       ...rituals.map((ritual) {
         final progress = DayProgress.from(ritual, entries[ritual.id]);
+        final past = history[ritual.id] ?? const <RitualEntry>[];
+        final info = streaks.analyse(ritual: ritual, entries: past);
+        void open() => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    RitualDetailScreen(groupId: groupId, ritual: ritual),
+              ),
+            );
         return RitualTile(
           ritual: ritual,
+          streak: info.currentStreak,
+          footer: RecentDaysStrip(
+            groupId: groupId,
+            ritual: ritual,
+            entries: past,
+            days: info.days,
+            onTapPhoto: (_) => open(),
+            onTapToday: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => CameraScreen(
+                  groupId: groupId,
+                  ritualId: ritual.id,
+                  completionValue: ritual.target,
+                ),
+              ),
+            ),
+          ),
           progress: progress,
           dueToday: dueToday && ritual.isDueOn(DateTime.now()),
           onToggle: () => _toggle(context, ref, ritual, progress),
           onSkip: () => _skip(context, ref, ritual, progress),
           onAdd: () => _add(context, ref, ritual, progress),
           onAdjust: () => _adjust(context, ref, ritual, progress),
-          onOpen: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => RitualDetailScreen(
-                groupId: groupId,
-                ritual: ritual,
-              ),
-            ),
-          ),
+          onOpen: open,
         );
       }),
     ];
