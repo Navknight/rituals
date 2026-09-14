@@ -1,3 +1,5 @@
 <resources>
     <string name="widget_description">Shows the latest photo from your ritual group</string>
+    <string name="today_widget_description">Shows today\'s ritual progress</string>
+    <string name="streak_widget_description">Shows your top streak</string>
 </resources>

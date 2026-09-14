@@ -7,6 +7,8 @@ import 'package:home_widget/home_widget.dart';
 /// no-op there as well as on web.
 class WidgetService {
   static const _androidWidgetName = 'RitualWidgetProvider';
+  static const _todayWidgetName = 'TodayWidgetProvider';
+  static const _streakWidgetName = 'StreakWidgetProvider';
   static const _appGroupId = 'group.com.rituals.android';
 
   static bool get _supported => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -49,6 +51,30 @@ class WidgetService {
       await HomeWidget.updateWidget(androidName: _androidWidgetName);
     } catch (e) {
       debugPrint('[WidgetService] update failed: $e');
+    }
+  }
+
+  /// Feeds the "today" and "streak" home screen widgets.
+  Future<void> updateSummary({
+    required String space,
+    required int done,
+    required int due,
+    required List<String> lines,
+    required int topStreak,
+    required String topStreakRitual,
+  }) async {
+    if (!_supported) return;
+    try {
+      await HomeWidget.saveWidgetData<String>('todaySpace', space);
+      await HomeWidget.saveWidgetData<String>('todayDone', '$done');
+      await HomeWidget.saveWidgetData<String>('todayDue', '$due');
+      await HomeWidget.saveWidgetData<String>('todayLines', lines.join('\n'));
+      await HomeWidget.saveWidgetData<String>('topStreak', '$topStreak');
+      await HomeWidget.saveWidgetData<String>('topStreakRitual', topStreakRitual);
+      await HomeWidget.updateWidget(androidName: _todayWidgetName);
+      await HomeWidget.updateWidget(androidName: _streakWidgetName);
+    } catch (e) {
+      debugPrint('[WidgetService] summary update failed: $e');
     }
   }
 }
