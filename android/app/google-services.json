@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "637686614153-042f5aj2dk71r7u1s2osr5ugu7sqfuqa.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rituals.android",
+            "certificate_hash": "1c8684742c85841e23cf0a39e996582241877f41"
+          }
+        },
+        {
           "client_id": "637686614153-2q8481usml772oh89lr7hafbjsvo2god.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

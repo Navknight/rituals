@@ -119,7 +119,7 @@ void main() async {
         debugPrint('[main] Google sign-in failed: $e');
       }
     }
-  });
+  }, onError: (Object e) => debugPrint('[main] Google sign-in event: $e'));
 
   FirebaseAuth.instance.authStateChanges().listen((user) {
     if (user == null) return;
