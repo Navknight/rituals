@@ -1,0 +1,6 @@
+0.1.8
+
+- Google sign in works again.
+- Sheets and lists no longer hide behind the button navigation bar.
+- Two new home screen widgets: Today and Streak.
+- Each ritual shows its last five days as photos, with a streak count.
