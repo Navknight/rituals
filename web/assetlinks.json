@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.rituals.android",
+      "sha256_cert_fingerprints": [
+        "A5:A4:55:20:A6:45:FD:4D:59:28:F8:57:C6:14:20:F4:75:89:5B:DE:AD:A9:0B:0F:A5:C7:3A:30:40:E9:18:70"
+      ]
+    }
+  }
+]

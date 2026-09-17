@@ -40,6 +40,21 @@ Firebase Hosting Admin role (Firebase console > Project settings > Service
 accounts > Generate new private key). Installed Android apps notice the new
 GitHub release on their next open and offer the download.
 
+## Invite links
+
+Invite links are `https://rituals-b3bed.web.app/join/<code>`. Android opens them
+in the app instead of the browser only while
+`https://rituals-b3bed.web.app/.well-known/assetlinks.json` lists the signing
+key's SHA-256 fingerprint, which `web/assetlinks.json` does. Two things keep
+that path working and both live in `firebase.json`: the rewrite from
+`/.well-known/assetlinks.json`, and `"appAssociation": "NONE"` — left on `AUTO`,
+Firebase serves its own generated (empty) file there instead. Signing with a
+different key means regenerating the fingerprint:
+
+```
+keytool -list -v -keystore upload-keystore.jks -alias upload | grep SHA256
+```
+
 ## Submitting to IzzyOnDroid
 
 Open a request at the [IzzyOnDroid repo issue tracker](https://gitlab.com/IzzyOnDroid/repo/-/issues).

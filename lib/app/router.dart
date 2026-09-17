@@ -1,15 +1,58 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/app/main_screen.dart';
 import 'package:rituals/core/providers.dart';
 import 'package:rituals/features/auth/sign_in_screen.dart';
+import 'package:rituals/models/group.dart';
 
-class AppRoot extends ConsumerWidget {
+class AppRoot extends ConsumerStatefulWidget {
   const AppRoot({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends ConsumerState<AppRoot> {
+  StreamSubscription<Uri>? _links;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenForInvites();
+  }
+
+  /// Picks up `https://<host>/join/<code>` links, whether the app was cold
+  /// started by one or was already open. Auxiliary: a failure here must not
+  /// stop the app from loading.
+  Future<void> _listenForInvites() async {
+    try {
+      final appLinks = AppLinks();
+      _takeInvite(await appLinks.getInitialLink());
+      _links = appLinks.uriLinkStream.listen(_takeInvite);
+    } catch (e) {
+      debugPrint('[AppRoot] deep links unavailable: $e');
+    }
+  }
+
+  void _takeInvite(Uri? uri) {
+    if (uri == null || !uri.pathSegments.contains('join')) return;
+    final code = inviteCodeFrom(uri.pathSegments.last);
+    if (code.isEmpty) return;
+    ref.read(pendingInviteProvider.notifier).set(code);
+  }
+
+  @override
+  void dispose() {
+    _links?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final auth = ref.watch(authStateProvider);
 
     return auth.when(
@@ -39,6 +82,7 @@ class _SpaceGate extends ConsumerStatefulWidget {
 class _SpaceGateState extends ConsumerState<_SpaceGate> {
   Future<void>? _provisioning;
   Object? _error;
+  bool _redeeming = false;
 
   @override
   void initState() {
@@ -54,15 +98,49 @@ class _SpaceGateState extends ConsumerState<_SpaceGate> {
       _provisioning = ref
           .read(userServiceProvider)
           .getOrCreateProfile(user)
-          .then((_) {})
+          .then((_) => _redeemPendingInvite())
           .catchError((Object e) {
         if (mounted) setState(() => _error = e);
       });
     });
   }
 
+  /// Joins the space behind an invite link the moment the profile exists, so a
+  /// link tapped while signed out still works after signing in.
+  Future<void> _redeemPendingInvite() async {
+    final code = ref.read(pendingInviteProvider);
+    if (code == null || _redeeming) return;
+
+    _redeeming = true;
+    final result = await ref.read(groupServiceProvider).joinGroup(
+          code,
+          widget.uid,
+        );
+    if (result.ok) {
+      await ref.read(userServiceProvider).addGroup(widget.uid, result.group!.id);
+      if (!mounted) return;
+      ref.read(activeSpaceProvider.notifier).select(result.group!.id);
+    }
+    ref.read(pendingInviteProvider.notifier).set(null);
+    _redeeming = false;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.ok
+              ? 'Joined ${result.group!.name}'
+              : result.error ?? 'Could not join that space',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen<String?>(pendingInviteProvider, (_, code) {
+      if (code != null) _redeemPendingInvite();
+    });
+
     if (_error != null) {
       return _Failure(
         title: 'Could not set up your space',

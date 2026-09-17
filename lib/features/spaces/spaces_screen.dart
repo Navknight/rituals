@@ -324,11 +324,6 @@ class _JoinSpaceSheetState extends ConsumerState<_JoinSpaceSheet> {
     super.dispose();
   }
 
-  String _extractCode(String raw) {
-    final segment = raw.contains('/') ? raw.split('/').last : raw;
-    return segment.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
-  }
-
   Future<void> _scan() async {
     final code = await Navigator.push<String>(
       context,
@@ -336,7 +331,7 @@ class _JoinSpaceSheetState extends ConsumerState<_JoinSpaceSheet> {
     );
     if (code == null) return;
     if (!mounted) return;
-    setState(() => _controller.text = _extractCode(code));
+    setState(() => _controller.text = inviteCodeFrom(code));
     await _submit();
   }
 
@@ -490,8 +485,9 @@ class _InviteSheet extends StatelessWidget {
     return SharePlus.instance.share(
       ShareParams(
         text:
-            'Join my space "${group.name}" on Rituals with code '
-            '${group.inviteCode}',
+            'Join my space "${group.name}" on Rituals.\n\n'
+            'Code: ${group.inviteCode}\n'
+            '${inviteLinkFor(group.inviteCode)}',
         subject: 'Join ${group.name} on Rituals',
       ),
     );
@@ -509,7 +505,7 @@ class _InviteSheet extends StatelessWidget {
           Text(group.name, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 20),
           QrImageView(
-            data: group.inviteCode,
+            data: inviteLinkFor(group.inviteCode),
             size: 200,
             backgroundColor: Colors.transparent,
             eyeStyle: QrEyeStyle(

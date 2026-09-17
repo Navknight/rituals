@@ -52,6 +52,21 @@ class ActiveSpaceController extends Notifier<String?> {
 final activeSpaceProvider =
     NotifierProvider<ActiveSpaceController, String?>(ActiveSpaceController.new);
 
+/// An invite code that arrived through a `/join/<code>` link and has not been
+/// redeemed yet. It survives the sign in screen, so a signed out tap still
+/// lands in the space once the account exists. `_SpaceGate` clears it.
+class PendingInviteController extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void set(String? code) => state = code;
+}
+
+final pendingInviteProvider =
+    NotifierProvider<PendingInviteController, String?>(
+  PendingInviteController.new,
+);
+
 /// The space to show: the current selection when it is still valid, otherwise
 /// the personal space.
 ///

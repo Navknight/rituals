@@ -39,6 +39,7 @@
   ],
   "hosting": {
     "public": "build/web",
+    "appAssociation": "NONE",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -74,6 +75,10 @@
       }
     ],
     "rewrites": [
+      {
+        "source": "/.well-known/assetlinks.json",
+        "destination": "/assetlinks.json"
+      },
       {
         "source": "**",
         "destination": "/index.html"

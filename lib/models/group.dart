@@ -60,3 +60,17 @@ class Group {
     };
   }
 }
+
+/// Where the web app lives. Invite links point here; Firebase Hosting rewrites
+/// every path to `index.html`, so `/join/<code>` loads the app.
+const inviteLinkHost = 'rituals-b3bed.web.app';
+
+/// The shareable invite link for [code].
+String inviteLinkFor(String code) => 'https://$inviteLinkHost/join/$code';
+
+/// Pulls an invite code out of anything that might carry one: a raw code, an
+/// invite link, or a scanned QR payload. Empty when there is nothing usable.
+String inviteCodeFrom(String raw) {
+  final segment = raw.contains('/') ? raw.split('/').last : raw;
+  return segment.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+}
