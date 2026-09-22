@@ -11,6 +11,7 @@ import 'package:rituals/features/rituals/ritual_controller.dart';
 import 'package:rituals/features/rituals/ritual_editor.dart';
 import 'package:rituals/features/stats/stat_widgets.dart';
 import 'package:rituals/models/ritual.dart';
+import 'package:rituals/shared/broken_photo.dart';
 import 'package:rituals/models/ritual_entry.dart';
 import 'package:rituals/models/user_profiles.dart';
 import 'package:rituals/shared/user_avatar.dart';
@@ -635,14 +636,10 @@ class _PhotosStrip extends ConsumerWidget {
                     ),
                   );
                 },
-                errorBuilder: (context, error, stack) => Container(
-                  width: 96,
-                  height: 96,
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    LucideIcons.imageOff,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                errorBuilder: (context, error, stack) => BrokenPhoto(
+                  groupId: groupId,
+                  entry: entry,
+                  size: 96,
                 ),
               ),
             ),
@@ -668,13 +665,10 @@ class _PhotosStrip extends ConsumerWidget {
                   child: InteractiveViewer(
                     child: Image.network(
                       entry.photoUrl!,
-                      errorBuilder: (context, error, stack) => Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Icon(
-                          LucideIcons.imageOff,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      errorBuilder: (context, error, stack) => BrokenPhoto(
+                        groupId: groupId,
+                        entry: entry,
+                        iconSize: 48,
                       ),
                     ),
                   ),
