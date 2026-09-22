@@ -3,9 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'package:rituals/models/ritual_entry.dart';
 
 /// Thrown when the bytes handed over are not an image this app can read.
 class UnreadablePhotoException implements Exception {
@@ -64,22 +62,5 @@ class PhotoService {
     final ref = FirebaseStorage.instance.ref(path);
     await ref.putData(photoBytes, SettableMetadata(contentType: 'image/jpeg'));
     return await ref.getDownloadURL();
-  }
-
-  Future<void> createEntry(
-    String groupId,
-    String ritualId,
-    RitualEntry entry,
-  ) async {
-    final firestore = FirebaseFirestore.instance;
-    final docRef = await firestore
-        .collection('groups')
-        .doc(groupId)
-        .collection('rituals')
-        .doc(ritualId)
-        .collection('entries')
-        .add(entry.toMap());
-
-    await docRef.update({'id': docRef.id});
   }
 }

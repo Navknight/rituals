@@ -36,6 +36,12 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
   bool _saving = false;
 
   @override
+  void dispose() {
+    captionController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(

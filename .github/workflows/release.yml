@@ -61,6 +61,25 @@ jobs:
       # IzzyOnDroid's 30 MB ceiling, while each split lands well under it.
       - run: flutter build apk --release --split-per-abi
 
+      # The changelog IzzyOnDroid shows is keyed by versionCode, and it has to
+      # exist before the tag or the release goes out without release notes.
+      - name: Resolve the versionCode from pubspec
+        id: version
+        run: |
+          VERSION_CODE=$(grep -m1 '^version:' pubspec.yaml | sed 's/.*+//' | tr -d '[:space:]')
+          if ! [ "$VERSION_CODE" -gt 0 ] 2>/dev/null; then
+            echo "::error::Could not read a versionCode from pubspec.yaml's version: line."
+            exit 1
+          fi
+          CHANGELOG="fastlane/metadata/android/en-US/changelogs/${VERSION_CODE}.txt"
+          if [ ! -f "$CHANGELOG" ]; then
+            echo "::error::$CHANGELOG is missing. IzzyOnDroid keys changelogs by"
+            echo "::error::versionCode and reads them per tag, so add it before tagging."
+            exit 1
+          fi
+          echo "changelog=$CHANGELOG" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+
       - name: Name the APKs after the tag
         id: collect
         run: |
@@ -98,5 +117,5 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: dist/*.apk
-          body_path: fastlane/metadata/android/en-US/changelogs/${{ vars.VERSION_CODE || '1' }}.txt
+          body_path: ${{ steps.version.outputs.changelog }}
           fail_on_unmatched_files: true

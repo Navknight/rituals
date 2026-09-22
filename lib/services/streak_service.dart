@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rituals/models/ritual.dart';
 import 'package:rituals/models/ritual_entry.dart';
 
@@ -126,37 +125,12 @@ class StreakInfo {
 }
 
 class StreakService {
-  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
-
   /// Days of score history kept for the trend chart.
   static const int historyDays = 90;
 
   /// Loop Habit Tracker's decay constant. Chosen so a perfectly kept daily
   /// ritual scores about 80% after a month and 96% after two.
   static const double _scoreHalfLife = 13.0;
-
-  Future<StreakInfo> loadStreak({
-    required String groupId,
-    required Ritual ritual,
-    String? userId,
-  }) async {
-    final snapshot = await _firestore
-        .collection('groups')
-        .doc(groupId)
-        .collection('rituals')
-        .doc(ritual.id)
-        .collection('entries')
-        .orderBy('createdAt')
-        .get();
-
-    var entries =
-        snapshot.docs.map((doc) => RitualEntry.fromMap(doc.data())).toList();
-    if (userId != null) {
-      entries = entries.where((e) => e.userId == userId).toList();
-    }
-
-    return analyse(ritual: ritual, entries: entries);
-  }
 
   /// Collapses entries to one result per day and derives every statistic.
   ///

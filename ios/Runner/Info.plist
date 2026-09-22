@@ -47,6 +47,12 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Rituals opens the camera so you can photograph a habit as you do it. A photo is what makes the day count.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Rituals lets you pick an existing photo as proof, for the habits you have allowed gallery photos on.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Rituals saves the photos you take back to your library, so your proof is yours to keep.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

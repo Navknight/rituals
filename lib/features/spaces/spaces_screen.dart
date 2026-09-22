@@ -109,6 +109,7 @@ class SpacesScreen extends ConsumerWidget {
         ],
       ),
     );
+    controller.dispose();
     if (name == null || name.isEmpty) return;
     if (!context.mounted) return;
 
@@ -266,6 +267,7 @@ class _SharedSpaceCard extends ConsumerWidget {
         ],
       ),
     );
+    controller.dispose();
     if (name == null || name.isEmpty) return;
     await ref.read(groupServiceProvider).rename(group.id, name);
   }

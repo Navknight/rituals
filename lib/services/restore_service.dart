@@ -8,6 +8,17 @@ import 'package:http/http.dart' as http;
 class RestoreService {
   final _firestore = FirebaseFirestore.instance;
 
+  /// Entries live flat under the space, not nested beneath their ritual. This
+  /// used to reach for the old nested path, where it found nothing, decided
+  /// the entry had been deleted and threw the request away — so a broken photo
+  /// was never actually restored.
+  DocumentReference<Map<String, dynamic>> _entry(String groupId, String entryId) =>
+      _firestore
+          .collection('groups')
+          .doc(groupId)
+          .collection('entries')
+          .doc(entryId);
+
   /// Called when an image fails to load — writes an idempotent restore request
   /// so any peer that has the photo can re-upload it.
   Future<void> requestRestore({
@@ -75,14 +86,7 @@ class RestoreService {
     required String originalUrl,
   }) async {
     try {
-      final entryDoc = await _firestore
-          .collection('groups')
-          .doc(groupId)
-          .collection('rituals')
-          .doc(ritualId)
-          .collection('entries')
-          .doc(entryId)
-          .get();
+      final entryDoc = await _entry(groupId, entryId).get();
 
       if (!entryDoc.exists) {
         // Entry was deleted — clean up the dangling request
@@ -124,14 +128,7 @@ class RestoreService {
       final newUrl = await ref.getDownloadURL();
 
       // Update the entry so all real-time listeners pick up the new URL
-      await _firestore
-          .collection('groups')
-          .doc(groupId)
-          .collection('rituals')
-          .doc(ritualId)
-          .collection('entries')
-          .doc(entryId)
-          .update({'photoUrl': newUrl});
+      await _entry(groupId, entryId).update({'photoUrl': newUrl});
 
       // Clean up the request
       await _firestore

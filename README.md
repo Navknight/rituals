@@ -179,6 +179,26 @@ reviewed statically, every id it references resolves and the receiver is
 registered in the manifest, but no Android build or device run was possible
 here. Treat it as untested on device.
 
+## Access rules
+
+`firestore.rules` splits every read into `get` and `list`, and denies `list`
+wherever the app does not need it — which is everywhere except entries within a
+space you belong to.
+
+This matters more than it sounds. A bare `allow read` grants both, so the old
+rules let any signed-in user pull down the whole `groups` collection: every
+space's id, member list and invite code, personal spaces included. From there
+the join rule, which lets a non-member add themselves to any shared space, was
+enough to walk into all of them. Invite codes could also be minted by anyone
+for any space, so knowing an id was enough to forge a way in.
+
+Now ids and codes have to be given to you, invite codes can only be created for
+a space you are already in, and restore requests are scoped to members.
+
+**These are deployed separately from the app.** Until
+`firebase deploy --only firestore:rules` runs, the old permissive rules are
+still live, no matter what this repo says.
+
 ## Data model
 
 ```

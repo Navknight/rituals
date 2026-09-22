@@ -113,6 +113,14 @@ class GroupService {
   Future<void> deleteGroup(String groupId, String inviteCode) async {
     final group = firestore.collection('groups').doc(groupId);
 
+    // The invite code goes first. Permission to touch it is derived from
+    // membership of the space it points at, so once the space is gone there is
+    // no longer any way to prove the right to clean it up, and the code is
+    // stranded for good.
+    if (inviteCode.isNotEmpty) {
+      await firestore.collection('inviteCodes').doc(inviteCode).delete();
+    }
+
     for (final sub in ['rituals', 'entries']) {
       final docs = await group.collection(sub).get();
       for (final chunk in _chunk(docs.docs, 400)) {
@@ -125,9 +133,6 @@ class GroupService {
     }
 
     await group.delete();
-    if (inviteCode.isNotEmpty) {
-      await firestore.collection('inviteCodes').doc(inviteCode).delete();
-    }
   }
 
   static Iterable<List<T>> _chunk<T>(List<T> items, int size) sync* {

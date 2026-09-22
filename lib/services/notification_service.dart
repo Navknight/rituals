@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -9,6 +11,13 @@ class NotificationService {
   final _userService = UserService();
   static final _localNotifications = FlutterLocalNotificationsPlugin();
   static bool _localNotificationsInitialized = false;
+
+  // Both of these listen to process-wide streams, and both are re-run on every
+  // sign-in. Held statically and cancelled first so that signing out and back
+  // in does not stack up a second handler, which showed the user two
+  // notifications for one photo.
+  static StreamSubscription<String>? _tokenRefreshSub;
+  static StreamSubscription<RemoteMessage>? _foregroundSub;
 
   Future<void> initialize(String uid) async {
     if (kIsWeb) {
@@ -29,7 +38,8 @@ class NotificationService {
       await _saveToken(uid);
     }
 
-    _messaging.onTokenRefresh.listen((newToken) {
+    unawaited(_tokenRefreshSub?.cancel());
+    _tokenRefreshSub = _messaging.onTokenRefresh.listen((newToken) {
       _userService.updateFcmToken(uid, newToken);
     });
 
@@ -97,7 +107,8 @@ class NotificationService {
   }
 
   void setupForegroundHandler() {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    unawaited(_foregroundSub?.cancel());
+    _foregroundSub = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       // Update widget
       if (message.data.containsKey('photoUrl')) {
         final widgetService = WidgetService();

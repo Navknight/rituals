@@ -14,24 +14,53 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid in groupData(groupId).memberIds;
     }
 
+    // Reads are split into `get` and `list` throughout this file, and `list` is
+    // denied wherever the app does not need it.
+    //
+    // A bare `allow read` covers both, which means it also allows a client to
+    // pull down the entire collection. That is how a signed-in user could
+    // enumerate every group in the database, read off the ids and invite codes,
+    // and walk into any shared space. The app only ever addresses these
+    // collections by a known document id, so nothing here needs `list`, and the
+    // unguessable ids become a real boundary rather than a decorative one.
+
     match /users/{uid} {
-      allow read: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if false;
       allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
     match /inviteCodes/{code} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      // Looked up by the code the joiner types in. Listing would hand out every
+      // code there is.
+      allow get: if isSignedIn();
+      allow list: if false;
+
+      // A code may only be minted for a space you are already in. Without this
+      // anyone could point a code of their own at someone else's space and use
+      // it to let themselves in.
+      allow create: if isSignedIn()
+        && isGroupMember(request.resource.data.groupId);
+
       allow update, delete: if isSignedIn()
         && isGroupMember(resource.data.groupId);
     }
 
+    // A queue of "this photo failed to load, can someone re-upload it". Scoped
+    // to the space it belongs to: these carry group and ritual ids, and handing
+    // those to non-members would undo the rules above.
     match /restoreRequests/{docId} {
-      allow read, write: if isSignedIn();
+      allow get, list: if isGroupMember(resource.data.groupId);
+      allow create: if isGroupMember(request.resource.data.groupId);
+      allow update, delete: if isGroupMember(resource.data.groupId);
     }
 
     match /groups/{groupId} {
-      allow read: if isSignedIn();
+      // A joiner has to read the space before they can join it, so `get` stays
+      // open to any signed-in user. `list` does not: that is what turned an
+      // unguessable id into a browsable directory.
+      allow get: if isSignedIn();
+      allow list: if false;
 
       // A space is created with its author as the only member.
       allow create: if isSignedIn()
@@ -39,7 +68,9 @@ service cloud.firestore {
         && request.resource.data.memberIds == [request.auth.uid];
 
       // Members can edit. A non-member may only add themselves, and only to a
-      // shared space that is not yet full.
+      // shared space that is not yet full. This branch is what lets a join
+      // succeed, so it rests on the space's id being unguessable and on invite
+      // codes no longer being enumerable or forgeable.
       allow update: if isSignedIn() && (
         isGroupMember(groupId) || (
           resource.data.isPersonal != true
