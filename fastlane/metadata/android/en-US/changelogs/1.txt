@@ -1,0 +1,6 @@
+First public release.
+
+- Photo proof per ritual, with optional gallery picks
+- Check, quantity and timer rituals on flexible schedules
+- Streaks, completion rates and a decaying habit score
+- Android home screen widget

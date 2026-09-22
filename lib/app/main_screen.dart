@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/core/providers.dart';
+import 'package:rituals/features/camera/pending_pick.dart';
+import 'package:rituals/features/camera/preview_screen.dart';
 import 'package:rituals/features/home/home_screen.dart';
 import 'package:rituals/features/rituals/ritual_editor.dart';
 import 'package:rituals/features/settings/settings_screen.dart';
@@ -60,6 +62,31 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) RestoreService().processPendingRequests([widget.groupId]);
     });
+
+    await _recoverLostPick();
+  }
+
+  /// Picks up a gallery photo that Android dropped by killing this app while
+  /// the picker was open, and carries it on to the preview as if nothing had
+  /// happened. Without this the photo is silently lost, which on Samsung
+  /// devices is the common case rather than the rare one.
+  Future<void> _recoverLostPick() async {
+    final recovered = await PendingPickStore().recover();
+    if (recovered == null || !mounted || !context.mounted) return;
+
+    final pick = recovered.pick;
+    ref.read(activeSpaceProvider.notifier).select(pick.groupId);
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PreviewScreen(
+          photoPath: recovered.file.path,
+          groupId: pick.groupId,
+          ritualId: pick.ritualId,
+          completionValue: pick.completionValue,
+          fromGallery: true,
+        ),
+      ),
+    );
   }
 
   Future<void> _openFromNotification(Map<String, dynamic> data) async {

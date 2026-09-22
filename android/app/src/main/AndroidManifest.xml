@@ -1,9 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Required by image_gallery_saver on Android 9 and below -->
+    <!-- Required by the gal plugin to save photos to the gallery on Android 9 and below -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
     <application
-        android:label="rituals"
+        android:label="Rituals"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

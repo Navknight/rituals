@@ -1,4 +1,4 @@
-package com.example.rituals
+package io.github.navknight.rituals
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager

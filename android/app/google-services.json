@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:637686614153:android:70cad962d152a471361e58",
         "android_client_info": {
-          "package_name": "com.example.rituals"
+          "package_name": "io.github.navknight.rituals"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "637686614153-u7artuic4otp6ne59j2ilt3jb25jud1v.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.rituals",
+            "package_name": "io.github.navknight.rituals",
             "certificate_hash": "f255bb1ebd9e61dc193c504690d3f679eda1538a"
           }
         },

@@ -1,0 +1,28 @@
+Rituals is a habit tracker built around one rule: a day does not count until you attach a photo of yourself doing the thing.
+
+A tick box is easy to lie to. A photo is not. Hitting a target without proof leaves the day sitting at partial, and partial does not extend a streak.
+
+<b>Track what you actually do</b>
+
+* Three kinds of ritual: a simple check, a daily quantity (eight glasses of water), or minutes on a timer (twenty minutes of reading).
+* Flexible schedules: fixed weekdays, a weekly quota you can spend on any days, or every N days.
+* Rest days you choose yourself, which neither extend nor break a streak.
+
+<b>Photo proof, on your terms</b>
+
+* Photo proof is on per ritual, and you can turn it off for the habits a camera cannot capture.
+* Rituals that cannot be photographed as they happen can opt in to gallery photos with a single switch.
+
+<b>See the shape of a habit</b>
+
+* Streaks, completion rates and a habit score that decays gently rather than punishing one missed day.
+* A month calendar and per-weekday breakdown for every ritual.
+* An Android home screen widget showing the latest photo and streak.
+
+<b>Alone or together</b>
+
+Rituals works as a private space for one, or as a shared space where a small group sees each other's proof. Streaks are yours either way.
+
+<b>A note on photos</b>
+
+Photos are temporary proof, not an archive. They are stored only for as long as they are needed to confirm the day and are cleaned up oldest-first.

@@ -42,6 +42,15 @@ optional photos can always come from the gallery. If the camera cannot be
 opened at all — no camera, permission denied, a locked-down browser — the screen
 says so and offers the gallery instead, where the ritual allows it.
 
+Opening the system picker pushes the app to the background, where Android is
+free to kill it to reclaim memory. Samsung's One UI does this routinely, and
+when it happens the picked photo never comes back through the call that asked
+for it — which looks, from the outside, exactly like gallery picking not
+working on Samsung phones at all. The app now notes down which ritual a pick
+was for before opening the picker, and collects the orphaned photo on next
+launch via `retrieveLostData`, carrying it on to the preview as if nothing had
+happened.
+
 ## Tracking
 
 **Three kinds of ritual**
@@ -231,6 +240,12 @@ test/           streak, score and model tests
 
 ## Setup
 
+The Android application ID is `io.github.navknight.rituals`. It used to be the
+`com.example.rituals` placeholder, which Google Play rejects and which reads as
+unfinished anywhere else. **`android/app/google-services.json` has not been
+regenerated for the new ID** — see [docs/PUBLISHING.md](docs/PUBLISHING.md),
+which covers what that breaks and how to fix it.
+
 1. Create a Firebase project and add Android, iOS and Web apps
 2. Run `flutterfire configure` to generate `lib/firebase_options.dart`
 3. In Firebase Auth, enable **Google** and **Anonymous** sign-in. Anonymous is
@@ -246,5 +261,17 @@ flutter test
 ```
 
 Covers the streak rules (misses, skips, rest days, every-N-days), the habit
-score formula, completion and weekday rates, and backward-compatible parsing of
-documents written by earlier versions.
+score formula, completion and weekday rates, photo-proof and gallery settings,
+and backward-compatible parsing of documents written by earlier versions.
+
+## Releasing
+
+Tagging `v*` builds signed, per-ABI release APKs and attaches them to a GitHub
+Release, which is what [IzzyOnDroid](https://izzyondroid.org/) tracks. Store
+listing text lives in `fastlane/metadata/android/en-US/`. The full process,
+including the two things that still need doing by hand, is in
+[docs/PUBLISHING.md](docs/PUBLISHING.md).
+
+## Licence
+
+MIT, see [LICENSE](LICENSE).

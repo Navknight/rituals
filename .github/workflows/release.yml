@@ -1,0 +1,102 @@
+name: Release APK
+
+# IzzyOnDroid tracks this repo's GitHub Releases and picks up the APKs
+# attached to them, so a tagged release is what actually publishes an update.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build and release (e.g. v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Restore the release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 is not set. IzzyOnDroid pins the signing"
+            echo "::error::certificate, so an unsigned or debug-signed build is useless."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/release.jks
+          cat > android/key.properties <<EOF
+          storeFile=release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+      # Split per ABI: a universal Flutter + Firebase APK runs close to
+      # IzzyOnDroid's 30 MB ceiling, while each split lands well under it.
+      - run: flutter build apk --release --split-per-abi
+
+      - name: Name the APKs after the tag
+        id: collect
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          mkdir -p dist
+          for f in build/app/outputs/flutter-apk/app-*-release.apk; do
+            abi=$(basename "$f" | sed 's/^app-//; s/-release\.apk$//')
+            cp "$f" "dist/rituals-${TAG}-${abi}.apk"
+          done
+          ls -lh dist
+          for f in dist/*.apk; do
+            size=$(stat -c%s "$f")
+            if [ "$size" -gt 31457280 ]; then
+              echo "::error::$f is over IzzyOnDroid's 30 MB limit."
+              exit 1
+            fi
+          done
+
+      - name: Verify the APKs are release-signed and not debuggable
+        run: |
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          for f in dist/*.apk; do
+            "$BUILD_TOOLS/apksigner" verify --print-certs "$f" | head -5
+            if "$BUILD_TOOLS/aapt" dump badging "$f" | grep -q "application-debuggable"; then
+              echo "::error::$f is debuggable; IzzyOnDroid rejects that."
+              exit 1
+            fi
+          done
+
+      - name: Clean up the keystore
+        if: always()
+        run: rm -f android/release.jks android/key.properties
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: dist/*.apk
+          body_path: fastlane/metadata/android/en-US/changelogs/${{ vars.VERSION_CODE || '1' }}.txt
+          fail_on_unmatched_files: true

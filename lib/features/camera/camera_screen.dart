@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:rituals/features/camera/pending_pick.dart';
 import 'package:rituals/features/camera/preview_screen.dart';
 import 'package:rituals/models/ritual.dart';
 
@@ -98,15 +99,27 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _pickFromGallery() async {
+    final store = PendingPickStore();
     try {
+      // The picker sends this app to the background, where Android may kill
+      // it outright. Note down what the pick was for first, so the photo can
+      // still find its way home if that happens.
+      await store.remember(PendingPick(
+        groupId: widget.groupId,
+        ritualId: widget.ritual.id,
+        completionValue: widget.completionValue,
+      ));
+
       final picked = await ImagePicker().pickImage(
         source: ImageSource.gallery,
         imageQuality: 90,
       );
+      await store.forget();
       if (picked != null && mounted) {
         await _openPreview(picked.path, fromGallery: true);
       }
     } catch (e) {
+      await store.forget();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not open the gallery: $e')),

@@ -47,3 +47,16 @@ app.*.map.json
 
 # Code editors
 .vscode
+
+# Release signing. Never commit these.
+android/key.properties
+*.jks
+*.keystore
+upload-keystore.jks
+
+# Firebase / Flutter build noise
+.firebase/
+firebase-debug.log
+/android/build/
+/functions/lib/
+/functions/node_modules/

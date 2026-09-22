@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rituals/features/camera/pending_pick.dart';
 import 'package:rituals/models/ritual.dart';
 
 Ritual _ritual({bool requirePhoto = true, bool allowGallery = false}) {
@@ -52,6 +53,34 @@ void main() {
       expect(_ritual().copyWith(allowGallery: true).allowGallery, isTrue);
       expect(_ritual(allowGallery: true).copyWith(title: 'Run').allowGallery,
           isTrue);
+    });
+  });
+
+  group('PendingPick', () {
+    test('survives a round trip', () {
+      const pick = PendingPick(
+        groupId: 'g1',
+        ritualId: 'r1',
+        completionValue: 8,
+      );
+      final restored = PendingPick.fromMap(pick.toMap())!;
+      expect(restored.groupId, 'g1');
+      expect(restored.ritualId, 'r1');
+      expect(restored.completionValue, 8);
+    });
+
+    test('a stash missing its ids is not usable', () {
+      expect(PendingPick.fromMap({'ritualId': 'r1'}), isNull);
+      expect(PendingPick.fromMap({'groupId': 'g1'}), isNull);
+      expect(
+        PendingPick.fromMap({'groupId': '', 'ritualId': 'r1'}),
+        isNull,
+      );
+    });
+
+    test('a stash without a value falls back to one completion', () {
+      final pick = PendingPick.fromMap({'groupId': 'g1', 'ritualId': 'r1'})!;
+      expect(pick.completionValue, 1);
     });
   });
 }
