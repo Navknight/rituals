@@ -69,6 +69,7 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
   late int _intervalDays;
   late String? _reminderTime;
   late bool _requirePhoto;
+  late bool _allowGallery;
   late int _colorValue;
   bool _saving = false;
   String? _titleError;
@@ -95,6 +96,7 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
     _intervalDays = ritual?.intervalDays ?? 2;
     _reminderTime = ritual?.reminderTime;
     _requirePhoto = ritual?.requirePhoto ?? true;
+    _allowGallery = ritual?.allowGallery ?? false;
     _colorValue = ritual?.colorValue ?? kRitualColors.first;
   }
 
@@ -255,6 +257,7 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
           reminderOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
           clearReminder: _reminderTime == null,
           requirePhoto: _requirePhoto,
+          allowGallery: _allowGallery,
           colorValue: _colorValue,
         );
         await ritualService.updateRitual(widget.groupId, updated);
@@ -277,6 +280,7 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
           reminderTime: _reminderTime,
           reminderOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
           requirePhoto: _requirePhoto,
+          allowGallery: _allowGallery,
           colorValue: _colorValue,
           createdBy: uid,
           createdAt: DateTime.now(),
@@ -551,6 +555,19 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
                 value: _requirePhoto,
                 onChanged: (value) => setState(() => _requirePhoto = value),
               ),
+              if (_requirePhoto)
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.only(left: 16),
+                  title: const Text('Allow gallery photos'),
+                  subtitle: Text(
+                    _allowGallery
+                        ? 'Proof can be picked from your gallery.'
+                        : 'Proof has to be shot with the camera.',
+                  ),
+                  secondary: const Icon(LucideIcons.images),
+                  value: _allowGallery,
+                  onChanged: (value) => setState(() => _allowGallery = value),
+                ),
               const SizedBox(height: 16),
               Text('Accent colour', style: textTheme.labelLarge),
               const SizedBox(height: 12),

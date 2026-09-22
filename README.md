@@ -28,6 +28,20 @@ Photo proof is on by default for every new ritual. Tapping a ritual opens the
 camera rather than ticking a box. You can turn it off per ritual, on the "Photo
 proof" switch in the editor, for the handful of habits a photo cannot capture.
 
+### Gallery photos
+
+A shot taken in the moment is the stronger proof, so by default a ritual that
+asks for proof only accepts the camera. Some habits cannot be photographed as
+they happen, though — a swim, a run in the rain, anything where the phone stays
+in a locker — so each ritual has an **"Allow gallery photos"** switch under
+"Photo proof". Turn it on and the camera screen grows a gallery button; leave it
+off and the only way in is the shutter.
+
+Rituals that do not require proof were never guarding anything, so their
+optional photos can always come from the gallery. If the camera cannot be
+opened at all — no camera, permission denied, a locked-down browser — the screen
+says so and offers the gallery instead, where the ritual allows it.
+
 ## Tracking
 
 **Three kinds of ritual**

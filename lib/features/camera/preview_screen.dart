@@ -14,12 +14,17 @@ class PreviewScreen extends ConsumerStatefulWidget {
   final String ritualId;
   final double completionValue;
 
+  /// Whether the photo came from the gallery, which only changes the wording
+  /// of the "go back and choose again" button.
+  final bool fromGallery;
+
   const PreviewScreen({
     super.key,
     required this.photoPath,
     required this.groupId,
     required this.ritualId,
     this.completionValue = 1,
+    this.fromGallery = false,
   });
 
   @override
@@ -81,8 +86,12 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: _saving ? null : () => Navigator.pop(context),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retake'),
+                          icon: Icon(widget.fromGallery
+                              ? Icons.photo_library_outlined
+                              : Icons.refresh),
+                          label: Text(
+                            widget.fromGallery ? 'Pick another' : 'Retake',
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -151,7 +160,8 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
     setState(() => _saving = true);
     try {
       final uid = ref.read(currentUidProvider);
-      if (uid == null) return;
+      // Without this the button would sit on "Saving..." forever.
+      if (uid == null) throw StateError('You are signed out.');
 
       final rawBytes = kIsWeb
           ? await XFile(widget.photoPath).readAsBytes()
@@ -180,10 +190,9 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
 
       await _refreshWidget(uid, caption);
 
-      if (mounted && context.mounted) {
-        var count = 0;
-        Navigator.of(context).popUntil((_) => count++ >= 2);
-      }
+      // Report the save upward; the camera screen closes itself in turn, so
+      // the stack unwinds the same way whether the photo was shot or picked.
+      if (mounted && context.mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);

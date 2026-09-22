@@ -68,6 +68,13 @@ class Ritual {
   /// Ask for a photo when completing. Off by default.
   final bool requirePhoto;
 
+  /// Let this ritual's proof come from the gallery as well as the camera.
+  ///
+  /// Off by default: a shot taken in the moment is the stronger proof. Some
+  /// rituals cannot be photographed as they happen, though — a swim, a run in
+  /// the rain — so they can opt in.
+  final bool allowGallery;
+
   final bool archived;
   final int sortOrder;
 
@@ -92,12 +99,19 @@ class Ritual {
     this.reminderTime,
     this.reminderOffsetMinutes = 0,
     this.requirePhoto = true,
+    this.allowGallery = false,
     this.archived = false,
     this.sortOrder = 0,
     this.colorValue = 0xFF1DB954,
     required this.createdBy,
     required this.createdAt,
   });
+
+  /// Whether a photo for this ritual may come from the gallery.
+  ///
+  /// A ritual that does not demand proof has nothing to guard, so its optional
+  /// photos can come from anywhere.
+  bool get galleryAllowed => allowGallery || !requirePhoto;
 
   /// The day the schedule counts from, normalised to midnight.
   DateTime get startDay =>
@@ -195,6 +209,7 @@ class Ritual {
     int? reminderOffsetMinutes,
     bool clearReminder = false,
     bool? requirePhoto,
+    bool? allowGallery,
     bool? archived,
     int? sortOrder,
     int? colorValue,
@@ -216,6 +231,7 @@ class Ritual {
       reminderOffsetMinutes:
           reminderOffsetMinutes ?? this.reminderOffsetMinutes,
       requirePhoto: requirePhoto ?? this.requirePhoto,
+      allowGallery: allowGallery ?? this.allowGallery,
       archived: archived ?? this.archived,
       sortOrder: sortOrder ?? this.sortOrder,
       colorValue: colorValue ?? this.colorValue,
@@ -248,6 +264,7 @@ class Ritual {
       reminderOffsetMinutes:
           (map['reminderOffsetMinutes'] as num?)?.toInt() ?? 0,
       requirePhoto: map['requirePhoto'] as bool? ?? true,
+      allowGallery: map['allowGallery'] as bool? ?? false,
       archived: map['archived'] as bool? ?? false,
       sortOrder: (map['sortOrder'] as num?)?.toInt() ?? 0,
       colorValue: (map['colorValue'] as num?)?.toInt() ?? 0xFF1DB954,
@@ -273,6 +290,7 @@ class Ritual {
       'reminderTime': reminderTime,
       'reminderOffsetMinutes': reminderOffsetMinutes,
       'requirePhoto': requirePhoto,
+      'allowGallery': allowGallery,
       'archived': archived,
       'sortOrder': sortOrder,
       'colorValue': colorValue,

@@ -116,7 +116,7 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) =>
-            CameraScreen(groupId: widget.groupId, ritualId: widget.ritual.id),
+            CameraScreen(groupId: widget.groupId, ritual: widget.ritual),
       ),
     );
   }
@@ -488,7 +488,7 @@ class _TodayActionState extends ConsumerState<_TodayAction> {
                         MaterialPageRoute(
                           builder: (_) => CameraScreen(
                             groupId: widget.groupId,
-                            ritualId: ritual.id,
+                            ritual: ritual,
                             completionValue: ritual.target,
                           ),
                         ),

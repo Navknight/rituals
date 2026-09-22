@@ -226,7 +226,7 @@ class HomeScreen extends ConsumerWidget {
         MaterialPageRoute(
           builder: (_) => CameraScreen(
             groupId: groupId,
-            ritualId: ritual.id,
+            ritual: ritual,
             completionValue: ritual.target,
           ),
         ),
