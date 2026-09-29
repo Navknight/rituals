@@ -251,6 +251,12 @@ void main() {
       expect(info.totalCompletions, 0);
     });
 
+    test('days missing their photo do not raise the score', () {
+      final ritual = _ritual(requirePhoto: true);
+      final info = run(ritual, _lastDays(20, from: 1));
+      expect(info.score, 0);
+    });
+
     test('the same day counts once a photo is attached', () {
       final ritual = _ritual(requirePhoto: true);
       final info = run(ritual, [
@@ -360,6 +366,48 @@ void main() {
       expect(restored.day, '2026-03-04');
       expect(restored.value, 1);
       expect(restored.hasPhoto, isTrue);
+    });
+  });
+
+  group('avoid rituals', () {
+    Ritual avoid({DateTime? createdAt}) => _ritual(
+          type: RitualType.avoid,
+          createdAt: createdAt ?? _today.subtract(const Duration(days: 9)),
+        );
+
+    test('every clean day counts, today included', () {
+      final info = run(avoid(), const []);
+      expect(info.currentStreak, 10);
+      expect(info.completionRate, 1);
+      expect(info.resultFor(_today).status, DayStatus.done);
+    });
+
+    test('a slip is a miss and resets the streak', () {
+      final info = run(avoid(), [_entry(_today.subtract(const Duration(days: 3)))]);
+      expect(info.currentStreak, 3);
+      expect(info.longestStreakOverall, 6);
+      expect(
+        info.resultFor(_today.subtract(const Duration(days: 3))).status,
+        DayStatus.missed,
+      );
+    });
+
+    test('a slip today breaks the streak straight away', () {
+      final info = run(avoid(), [_entry(_today)]);
+      expect(info.currentStreak, 0);
+    });
+
+    test('a skipped day holds the streak', () {
+      final info = run(avoid(), [_entry(_today, value: 0, skipped: true)]);
+      expect(info.currentStreak, 9);
+    });
+
+    test('never asks for a photo', () {
+      final info = run(
+        _ritual(type: RitualType.avoid, requirePhoto: true, createdAt: _today),
+        const [],
+      );
+      expect(info.currentStreak, 1);
     });
   });
 }

@@ -17,6 +17,7 @@ class CameraScreen extends StatefulWidget {
     required this.groupId,
     required this.ritualId,
     this.completionValue = 1,
+    this.source = ImageSource.camera,
   });
 
   final String groupId;
@@ -24,6 +25,10 @@ class CameraScreen extends StatefulWidget {
 
   /// Progress the photo logs when it is saved.
   final double completionValue;
+
+  /// Where the photo comes from. Gallery is only offered where photo proof
+  /// is not required, so a live shot stays the proof.
+  final ImageSource source;
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -38,7 +43,7 @@ class _CameraScreenState extends State<CameraScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _pick(ImageSource.camera);
+      _pick(widget.source);
     });
   }
 
@@ -59,10 +64,10 @@ class _CameraScreenState extends State<CameraScreen> {
     try {
       final picked = await _picker.pickImage(
         source: source,
-        // Let the OEM pipeline do the work; only cap the longest edge so a
-        // 50MP original does not have to be read into memory whole.
-        maxWidth: 2048,
-        imageQuality: 92,
+        // Let the platform do the resize and compression, so a 50MP original
+        // is never decoded in Dart.
+        maxWidth: 800,
+        imageQuality: 80,
       );
       await PendingCapture.forget();
       if (!mounted) return;

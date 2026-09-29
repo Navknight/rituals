@@ -43,8 +43,6 @@ class RitualEntry {
 
   bool get hasPhoto => photoUrl != null && photoUrl!.isNotEmpty;
 
-  DateTime get dayDate => parseDay(day);
-
   RitualEntry copyWith({
     double? value,
     bool? skipped,

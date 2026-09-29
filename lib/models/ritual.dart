@@ -11,6 +11,10 @@ enum RitualType {
 
   /// Accumulate minutes toward a daily target, e.g. 20 minutes of reading.
   timer,
+
+  /// A habit to break, e.g. no alcohol. Every due day counts as kept unless a
+  /// slip is logged, so an entry here means the opposite of the others.
+  avoid,
 }
 
 /// How often a ritual is expected.
@@ -156,6 +160,7 @@ class Ritual {
   String get targetLabel {
     switch (type) {
       case RitualType.check:
+      case RitualType.avoid:
         return '';
       case RitualType.quantity:
         return '${trimNumber(target)}${unit.isEmpty ? '' : ' $unit'}';

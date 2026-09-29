@@ -34,99 +34,90 @@ Color dayStatusColor(
   }
 }
 
-class StatTile extends StatelessWidget {
-  const StatTile({
+/// One headline percentage with its meter, a line saying what it means, and
+/// the smaller figures beneath it.
+class ScoreCard extends StatelessWidget {
+  const ScoreCard({
     super.key,
     required this.label,
-    required this.value,
-    this.hint,
-    this.icon,
+    required this.score,
+    required this.caption,
+    required this.figures,
     this.accent,
   });
 
   final String label;
-  final String value;
-  final String? hint;
-  final IconData? icon;
+  final double score;
+  final String caption;
+
+  /// Value and label pairs shown in a row under the meter.
+  final List<(String, String)> figures;
   final Color? accent;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(Corners.card),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      decoration: raisedDecoration(scheme, radius: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 16, color: accent ?? scheme.primary),
-                const SizedBox(width: 6),
-              ],
-              Expanded(
-                child: Text(
-                  label,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
           Text(
-            value,
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
+            label,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          Text(
+            '${(score * 100).round()}%',
+            style: theme.textTheme.displayMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1.5,
               color: scheme.onSurface,
             ),
           ),
-          if (hint != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              hint!,
-              style: textTheme.labelSmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: score,
+              minHeight: 10,
+              color: accent ?? scheme.primary,
+              backgroundColor: scheme.surfaceContainerHighest,
             ),
-          ],
+          ),
+          const SizedBox(height: 8),
+          Text(caption, style: theme.textTheme.bodySmall),
+          const SizedBox(height: 16),
+          Divider(height: 1, color: scheme.outlineVariant),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final (value, label) in figures)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          value,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        Text(label, style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
-    );
-  }
-}
-
-class StatRow extends StatelessWidget {
-  const StatRow({super.key, required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 420;
-        final columns = narrow ? 2 : children.length;
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            for (final child in children)
-              SizedBox(
-                width: (constraints.maxWidth - (columns - 1) * 12) / columns,
-                child: child,
-              ),
-          ],
-        );
-      },
     );
   }
 }
@@ -402,12 +393,14 @@ class WeekdayBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    if (rates.isEmpty) {
+    // All-zero bars draw an empty grid, which reads as broken.
+    if (rates.values.every((rate) => rate == 0)) {
       return SizedBox(
-        height: 160,
+        height: 96,
         child: Center(
           child: Text(
-            'Not enough data yet',
+            'Keep a few days and your best weekdays show up here.',
+            textAlign: TextAlign.center,
             style: TextStyle(color: scheme.onSurfaceVariant),
           ),
         ),
@@ -554,7 +547,7 @@ class MonthCalendar extends StatelessWidget {
                     label.substring(0, 1),
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w800,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -618,7 +611,7 @@ class MonthCalendar extends StatelessWidget {
                                               '$dayNum',
                                               style: TextStyle(
                                                 fontSize: 13,
-                                                fontWeight: FontWeight.w500,
+                                                fontWeight: FontWeight.w700,
                                                 color: scheme.onSurfaceVariant,
                                               ),
                                             ),

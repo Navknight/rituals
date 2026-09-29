@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:rituals/app/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/services/auth_service.dart';
@@ -57,21 +58,27 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   Container(
                     width: 88,
                     height: 88,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(26),
+                    padding: const EdgeInsets.only(bottom: 6),
+                    decoration: ShapeDecoration(
+                      color: theme.colorScheme.primary,
+                      shape: LipBorder(
+                        radius: 26,
+                        depth: 6,
+                        lip: lipOf(theme.colorScheme.primary),
+                      ),
                     ),
                     child: Icon(
                       LucideIcons.flame,
                       size: 44,
-                      color: theme.colorScheme.onPrimaryContainer,
+                      color: theme.colorScheme.onPrimary,
                     ),
                   ),
                   const SizedBox(height: 28),
                   Text(
                     'Rituals',
                     style: theme.textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1,
                     ),
                   ),
                   const SizedBox(height: 10),

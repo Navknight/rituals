@@ -6,7 +6,7 @@ import 'package:rituals/services/streak_service.dart';
 import 'package:rituals/shared/entry_photo.dart';
 
 /// Amber of the streak bolt, shared by the chip, the hero and the calendar.
-const streakBolt = Color(0xFFFFBC03);
+const streakColor = Color(0xFFFF9600);
 
 /// The last few days of a ritual as a row of tilted photo prints, after Ente's
 /// ritual cards. A day with proof shows its newest photo, a done day without
@@ -105,7 +105,7 @@ class RecentDaysStrip extends StatelessWidget {
         tilt: _tilts[index % _tilts.length],
         child: ColoredBox(
           color: accent,
-          child: const Icon(LucideIcons.zap, color: Colors.white, size: 20),
+          child: const Icon(LucideIcons.check, color: Colors.white, size: 22),
         ),
       );
     } else if (isToday && status != DayStatus.skipped) {
@@ -142,7 +142,7 @@ class RecentDaysStrip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               height: 1.15,
-              fontWeight: isToday ? FontWeight.w700 : FontWeight.w600,
+              fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
               color: isToday ? scheme.onSurface : scheme.onSurfaceVariant,
             ),
           ),
@@ -321,12 +321,12 @@ class StreakChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               height: 1,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w800,
               color: scheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(width: 4),
-          const Icon(LucideIcons.zap, size: 14, color: streakBolt),
+          const Icon(LucideIcons.flame, size: 14, color: streakColor),
         ],
       ),
     );

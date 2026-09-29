@@ -49,6 +49,10 @@ const Map<CommentaryTone, Map<Moment, List<String>>> commentaryLines = {
       'Undone. No harm.',
       'Taken back off the list.',
     ],
+    Moment.awaitingPhoto: [
+      'Target hit. Add the photo and today counts.',
+      'Nearly there. One photo and it is done.',
+    ],
     Moment.firstRitual: [
       'One ritual is the right number to start with.',
       'Good. Now do it tomorrow.',
@@ -75,6 +79,14 @@ const Map<CommentaryTone, Map<Moment, List<String>>> commentaryLines = {
       'Time for {ritual}.',
       '{ritual} is waiting whenever you are.',
       'A small window for {ritual}.',
+    ],
+    Moment.slipped: [
+      'Slip logged. Being honest about it is the hard part.',
+      'One slip is one day. Tomorrow starts clean.',
+    ],
+    Moment.resist: [
+      'Checking in on {ritual}. You are doing well.',
+      'Hold steady on {ritual} today.',
     ],
   },
   CommentaryTone.dry: {
@@ -121,6 +133,10 @@ const Map<CommentaryTone, Map<Moment, List<String>>> commentaryLines = {
       'Unlogged. We will pretend that never happened.',
       'Taken back. The records have been adjusted.',
     ],
+    Moment.awaitingPhoto: [
+      'Done, allegedly. A photo would settle it.',
+      'The target is met. The evidence is not.',
+    ],
     Moment.firstRitual: [
       'One ritual. Ambitious restraint.',
       'A single habit. Let us see how long this lasts.',
@@ -147,6 +163,14 @@ const Map<CommentaryTone, Map<Moment, List<String>>> commentaryLines = {
       '{ritual}. Now would be the time.',
       '{ritual} is due. No pressure, obviously.',
       'Reminder: {ritual}. You did ask for this.',
+    ],
+    Moment.slipped: [
+      'Slip noted. The counter resets. The lesson does not.',
+      'Back to day zero, which is also technically a day.',
+    ],
+    Moment.resist: [
+      '{ritual}. Still holding? Good.',
+      'The tricky hour for {ritual}. Carry on.',
     ],
   },
   CommentaryTone.brutal: {
@@ -199,6 +223,10 @@ const Map<CommentaryTone, Map<Moment, List<String>>> commentaryLines = {
       'Unlogged. Cheating yourself is a bold hobby.',
       'Taken back. Nobody saw. Except me.',
     ],
+    Moment.awaitingPhoto: [
+      'No photo, no proof. Right now this is a rumour.',
+      'You say you did it. The camera has doubts.',
+    ],
     Moment.firstRitual: [
       'One ritual. Start small, in case you disappoint yourself.',
       'A single habit. The bar is on the floor. Do not trip.',
@@ -228,6 +256,15 @@ const Map<CommentaryTone, Map<Moment, List<String>>> commentaryLines = {
       '{ritual}. Now. Before you talk yourself out of it.',
       '{ritual} is due and your excuses are getting worse.',
       'Get up. {ritual}. It takes less time than the guilt.',
+    ],
+    Moment.slipped: [
+      'Slipped. Zero again. Hope it was worth it.',
+      'Counter reset. Your willpower called in sick.',
+      'Well, damn. Start again tomorrow.',
+    ],
+    Moment.resist: [
+      '{ritual}. Do not even think about it.',
+      'Hands off. {ritual} is not negotiable today.',
     ],
   },
 };

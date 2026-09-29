@@ -105,7 +105,16 @@ class HomeScreen extends ConsumerWidget {
         switch (filter) {
           case RitualFilter.today:
             sections.addAll(
-              _section(context, ref, 'Today', due, entries, dueToday: true),
+              _section(
+                context,
+                ref,
+                // The tab already says Today; label it only to split it from
+                // the rituals that are not due.
+                rest.isEmpty ? null : 'Due today',
+                due,
+                entries,
+                dueToday: true,
+              ),
             );
             if (rest.isNotEmpty) {
               sections.addAll(
@@ -115,7 +124,7 @@ class HomeScreen extends ConsumerWidget {
             }
           case RitualFilter.all:
             sections.addAll(
-              _section(context, ref, 'All rituals', active, entries,
+              _section(context, ref, null, active, entries,
                   dueToday: true),
             );
           case RitualFilter.archived:
@@ -207,7 +216,7 @@ class HomeScreen extends ConsumerWidget {
   List<Widget> _section(
     BuildContext context,
     WidgetRef ref,
-    String title,
+    String? title,
     List<Ritual> rituals,
     Map<String, List<RitualEntry>> entries, {
     required bool dueToday,
@@ -219,15 +228,18 @@ class HomeScreen extends ConsumerWidget {
     final streaks = ref.read(streakServiceProvider);
 
     return [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
-        child: Text(
-          title,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+      if (title == null)
+        const SizedBox(height: 12)
+      else
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+          child: Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
-      ),
       ...rituals.map((ritual) {
         final progress = DayProgress.from(ritual, entries[ritual.id]);
         final past = history[ritual.id] ?? const <RitualEntry>[];
@@ -277,6 +289,29 @@ class HomeScreen extends ConsumerWidget {
   ) async {
     final controller = ref.read(ritualControllerProvider);
     if (!controller.ready) return;
+
+    // A habit being broken is kept by default; the tap logs, or takes back,
+    // a slip.
+    if (progress.avoid && !progress.skipped) {
+      if (progress.slipped) {
+        await controller.clear(groupId: groupId, ritual: ritual);
+      } else {
+        await controller.complete(groupId: groupId, ritual: ritual);
+      }
+      if (context.mounted) {
+        _undoBar(
+          context,
+          ref,
+          ritual,
+          progress,
+          progress.slipped
+              ? 'Slip taken back'
+              : _remark(ref, Moment.slipped, ritual: ritual) ??
+                  'Slip logged. Tomorrow starts clean.',
+        );
+      }
+      return;
+    }
 
     if (progress.isDone || progress.skipped) {
       await controller.clear(groupId: groupId, ritual: ritual);
@@ -527,7 +562,7 @@ class _DayHeader extends StatelessWidget {
               color: allDone
                   ? theme.colorScheme.primary
                   : theme.colorScheme.onSurfaceVariant,
-              fontWeight: allDone ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: allDone ? FontWeight.w800 : FontWeight.normal,
             ),
           ),
           if (remark != null) ...[
@@ -535,8 +570,7 @@ class _DayHeader extends StatelessWidget {
             Text(
               remark!,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
-                fontStyle: FontStyle.italic,
+                color: theme.colorScheme.onSurfaceVariant,
                 height: 1.35,
               ),
             ),

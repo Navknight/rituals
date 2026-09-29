@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rituals/core/providers.dart';
 import 'package:rituals/models/ritual.dart';
@@ -14,26 +15,36 @@ class DayProgress {
   /// Whether this ritual only counts with a photo attached.
   final bool needsPhoto;
 
+  /// A habit being broken: kept while nothing is logged, see [RitualType.avoid].
+  final bool avoid;
+
   const DayProgress({
     required this.value,
     required this.target,
     this.skipped = false,
     this.hasPhoto = false,
     this.needsPhoto = false,
+    this.avoid = false,
   });
 
   static const none = DayProgress(value: 0, target: 1);
 
   /// Target reached, and proven if the ritual asks for proof.
-  bool get isDone => !skipped && value >= target && (!needsPhoto || hasPhoto);
+  bool get isDone => avoid
+      ? !skipped && value <= 0
+      : !skipped && value >= target && (!needsPhoto || hasPhoto);
+
+  /// A slip was logged on a habit being broken.
+  bool get slipped => avoid && !skipped && value > 0;
 
   /// The target is met but the photo is still missing.
   bool get awaitingPhoto =>
-      !skipped && value >= target && needsPhoto && !hasPhoto;
+      !avoid && !skipped && value >= target && needsPhoto && !hasPhoto;
 
-  bool get isStarted => !skipped && value > 0;
-  double get fraction =>
-      target <= 0 ? 0 : (value / target).clamp(0.0, 1.0).toDouble();
+  double get fraction {
+    if (avoid) return isDone ? 1 : 0;
+    return target <= 0 ? 0 : (value / target).clamp(0.0, 1.0).toDouble();
+  }
 
   factory DayProgress.from(Ritual ritual, List<RitualEntry>? entries) {
     if (entries == null || entries.isEmpty) {
@@ -41,6 +52,7 @@ class DayProgress {
         value: 0,
         target: ritual.target,
         needsPhoto: ritual.requirePhoto,
+        avoid: ritual.type == RitualType.avoid,
       );
     }
     var total = 0.0;
@@ -60,6 +72,7 @@ class DayProgress {
       skipped: skipped && total == 0,
       hasPhoto: photo,
       needsPhoto: ritual.requirePhoto,
+      avoid: ritual.type == RitualType.avoid,
     );
   }
 }
@@ -79,6 +92,7 @@ class RitualController {
     required Ritual ritual,
     DateTime? day,
   }) async {
+    HapticFeedback.mediumImpact();
     await _log(groupId, ritual, day, value: ritual.target);
   }
 
@@ -91,6 +105,12 @@ class RitualController {
     DateTime? day,
   }) async {
     final next = (current.value + amount).clamp(0.0, ritual.target * 10);
+    // A tick per step, and a firmer buzz on the step that meets the target.
+    if (current.value < ritual.target && next >= ritual.target) {
+      HapticFeedback.mediumImpact();
+    } else {
+      HapticFeedback.selectionClick();
+    }
     if (next <= 0) {
       await clear(groupId: groupId, ritual: ritual, day: day);
       return 0;

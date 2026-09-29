@@ -81,15 +81,11 @@ class RitualTile extends StatelessWidget {
       ),
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        color: theme.colorScheme.surfaceContainerLow,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-            color: done
-                ? accent.withValues(alpha: 0.45)
-                : theme.colorScheme.outlineVariant,
-          ),
-        ),
+        shape: raisedDecoration(
+          theme.colorScheme,
+          edge: done ? accent.withValues(alpha: 0.5) : null,
+          radius: 20,
+        ).shape,
         child: InkWell(
           onTap: onOpen,
           borderRadius: BorderRadius.circular(20),
@@ -116,7 +112,7 @@ class RitualTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w800,
                           decoration: skipped
                               ? TextDecoration.lineThrough
                               : TextDecoration.none,
@@ -145,7 +141,9 @@ class RitualTile extends StatelessWidget {
                   const SizedBox(width: 8),
                   StreakChip(streak: streak),
                 ],
-                if (ritual.type != RitualType.check && !skipped)
+                if (ritual.type != RitualType.check &&
+                    ritual.type != RitualType.avoid &&
+                    !skipped)
                   // Long press corrects the running total. Without it a count
                   // ritual could only ever go up.
                   GestureDetector(
@@ -190,6 +188,11 @@ class RitualTile extends StatelessWidget {
     if (progress.awaitingPhoto) return 'Needs a photo to count';
 
     switch (ritual.type) {
+      case RitualType.avoid:
+        if (progress.slipped) return 'Slipped today · tap to take it back';
+        return streak > 1
+            ? '$streak days clean · tap if you slip'
+            : 'Clean today · tap if you slip';
       case RitualType.check:
         if (progress.isDone) return 'Done today';
         return ritual.requirePhoto
@@ -226,7 +229,13 @@ class _ProgressRing extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: done ? 'Mark ${ritual.title} undone' : 'Complete ${ritual.title}',
+      label: progress.avoid
+          ? (progress.slipped
+              ? 'Take back the slip on ${ritual.title}'
+              : 'Log a slip on ${ritual.title}')
+          : done
+              ? 'Mark ${ritual.title} undone'
+              : 'Complete ${ritual.title}',
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
@@ -260,6 +269,13 @@ class _ProgressRing extends StatelessWidget {
                         key: const ValueKey('skip'),
                         color: theme.colorScheme.onSurfaceVariant,
                       )
+                    : progress.slipped
+                        ? Icon(
+                            LucideIcons.x,
+                            key: const ValueKey('slipped'),
+                            color: theme.colorScheme.error,
+                            size: 26,
+                          )
                     : done
                         ? Icon(
                             LucideIcons.check,

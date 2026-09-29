@@ -30,16 +30,18 @@ proof" switch in the editor, for the handful of habits a photo cannot capture.
 
 ## Tracking
 
-**Three kinds of ritual**
+**Four kinds of ritual**
 
 | Type | What counts as done | Example |
 |---|---|---|
 | Check | One tap | Make the bed |
 | Count | A daily target and unit | 8 glasses of water |
 | Timer | A daily target in minutes | 20 minutes reading |
+| Avoid | Nothing: every day is kept unless you log a slip | No alcohol, no smoking |
 
 Count and timer rituals accumulate through the day and show partial progress in
-the ring.
+the ring. Avoid rituals are for breaking a habit: the streak counts clean days,
+a slip resets it straight away, and they never ask for a photo.
 
 **Three kinds of schedule**
 

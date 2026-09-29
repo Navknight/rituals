@@ -38,7 +38,8 @@ Future<void> showRitualEditor(
       return Padding(
         padding: EdgeInsets.only(
           // Clear the 3-button nav bar too, or it covers the sheet's end.
-          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom +
+          bottom:
+              MediaQuery.viewInsetsOf(sheetContext).bottom +
               MediaQuery.paddingOf(sheetContext).bottom,
         ),
         child: _RitualEditorSheet(groupId: groupId, existing: existing),
@@ -83,16 +84,19 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
     super.initState();
     final ritual = widget.existing;
     _titleController = TextEditingController(text: ritual?.title ?? '');
-    _descriptionController =
-        TextEditingController(text: ritual?.description ?? '');
+    _descriptionController = TextEditingController(
+      text: ritual?.description ?? '',
+    );
     _unitController = TextEditingController(text: ritual?.unit ?? '');
-    _targetController =
-        TextEditingController(text: _formatTarget(ritual?.target ?? 1));
+    _targetController = TextEditingController(
+      text: _formatTarget(ritual?.target ?? 1),
+    );
     _emoji = ritual?.emoji ?? '🎯';
     _type = ritual?.type ?? RitualType.check;
     _scheduleType = ritual?.scheduleType ?? ScheduleType.weekdays;
-    _scheduleDays =
-        List<int>.from(ritual?.scheduleDays ?? const [1, 2, 3, 4, 5, 6, 7]);
+    _scheduleDays = List<int>.from(
+      ritual?.scheduleDays ?? const [1, 2, 3, 4, 5, 6, 7],
+    );
     _timesPerWeek = ritual?.timesPerWeek ?? 3;
     _intervalDays = ritual?.intervalDays ?? 2;
     _reminderTime = ritual?.reminderTime;
@@ -120,23 +124,24 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
       context: context,
       backgroundColor: colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(Corners.sheet)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Corners.sheet),
+        ),
       ),
       builder: (sheetContext) {
         return SafeArea(
           top: false,
           child: SizedBox(
-          height: 420,
-          child: EmojiPicker(
-            onEmojiSelected: (category, emoji) {
-              Navigator.of(sheetContext).pop(emoji.emoji);
-            },
-            config: Config(
-              height: 380,
-              emojiViewConfig: const EmojiViewConfig(columns: 8),
+            height: 420,
+            child: EmojiPicker(
+              onEmojiSelected: (category, emoji) {
+                Navigator.of(sheetContext).pop(emoji.emoji);
+              },
+              config: Config(
+                height: 380,
+                emojiViewConfig: const EmojiViewConfig(columns: 8),
+              ),
             ),
-          ),
           ),
         );
       },
@@ -185,7 +190,9 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Delete ritual'),
-          content: Text('Delete "${ritual.title}" and all its logs? This cannot be undone.'),
+          content: Text(
+            'Delete "${ritual.title}" and all its logs? This cannot be undone.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -211,11 +218,9 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
     final ritual = widget.existing;
     if (ritual == null) return;
     final navigator = Navigator.of(context);
-    await ref.read(ritualServiceProvider).setArchived(
-          widget.groupId,
-          ritual.id,
-          !ritual.archived,
-        );
+    await ref
+        .read(ritualServiceProvider)
+        .setArchived(widget.groupId, ritual.id, !ritual.archived);
     navigator.pop();
   }
 
@@ -223,15 +228,15 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
     final title = _titleController.text.trim();
     setState(() {
       _titleError = title.isEmpty ? 'Give it a name' : null;
-      _scheduleError = _scheduleType == ScheduleType.weekdays &&
-              _scheduleDays.isEmpty
+      _scheduleError =
+          _scheduleType == ScheduleType.weekdays && _scheduleDays.isEmpty
           ? 'Pick at least one day'
           : null;
     });
     if (_titleError != null || _scheduleError != null) return;
 
     final target = switch (_type) {
-      RitualType.check => 1.0,
+      RitualType.check || RitualType.avoid => 1.0,
       RitualType.quantity => double.tryParse(_targetController.text) ?? 1,
       RitualType.timer => double.tryParse(_targetController.text) ?? 20,
     };
@@ -259,7 +264,7 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
           reminderTime: _reminderTime,
           reminderOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
           clearReminder: _reminderTime == null,
-          requirePhoto: _requirePhoto,
+          requirePhoto: _requirePhoto && _type != RitualType.avoid,
           colorValue: _colorValue,
         );
         await ritualService.updateRitual(widget.groupId, updated);
@@ -281,7 +286,7 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
           intervalDays: _intervalDays,
           reminderTime: _reminderTime,
           reminderOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
-          requirePhoto: _requirePhoto,
+          requirePhoto: _requirePhoto && _type != RitualType.avoid,
           colorValue: _colorValue,
           createdBy: uid,
           createdAt: DateTime.now(),
@@ -371,22 +376,16 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
               Text('Type', style: textTheme.labelLarge),
               const SizedBox(height: 8),
               SegmentedButton<RitualType>(
+                expandedInsets: EdgeInsets.zero,
+                showSelectedIcon: false,
                 segments: const [
-                  ButtonSegment(
-                    value: RitualType.check,
-                    label: Text('Check'),
-                    icon: Icon(LucideIcons.check),
-                  ),
+                  ButtonSegment(value: RitualType.check, label: Text('Check')),
                   ButtonSegment(
                     value: RitualType.quantity,
                     label: Text('Count'),
-                    icon: Icon(LucideIcons.hash),
                   ),
-                  ButtonSegment(
-                    value: RitualType.timer,
-                    label: Text('Timer'),
-                    icon: Icon(LucideIcons.timer),
-                  ),
+                  ButtonSegment(value: RitualType.timer, label: Text('Timer')),
+                  ButtonSegment(value: RitualType.avoid, label: Text('Avoid')),
                 ],
                 selected: {_type},
                 onSelectionChanged: (selection) {
@@ -400,8 +399,9 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
                     Expanded(
                       child: TextField(
                         controller: _targetController,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: const InputDecoration(labelText: 'Target'),
                       ),
                     ),
@@ -418,33 +418,44 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
                   ],
                 ),
               ],
+              if (_type == RitualType.avoid) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'A habit to break, like no alcohol or no smoking. Every day '
+                  'counts as kept unless you log a slip.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
               if (_type == RitualType.timer) ...[
                 const SizedBox(height: 16),
                 TextField(
                   controller: _targetController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Target minutes'),
+                  decoration: const InputDecoration(
+                    labelText: 'Target minutes',
+                  ),
                 ),
               ],
               const SizedBox(height: 24),
               Text('Schedule', style: textTheme.labelLarge),
               const SizedBox(height: 8),
               SegmentedButton<ScheduleType>(
+                expandedInsets: EdgeInsets.zero,
+                showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(
                     value: ScheduleType.weekdays,
                     label: Text('Days'),
-                    icon: Icon(LucideIcons.calendarDays),
                   ),
                   ButtonSegment(
                     value: ScheduleType.timesPerWeek,
                     label: Text('Weekly'),
-                    icon: Icon(LucideIcons.repeat),
                   ),
                   ButtonSegment(
                     value: ScheduleType.everyNDays,
                     label: Text('Interval'),
-                    icon: Icon(LucideIcons.calendarClock),
                   ),
                 ],
                 selected: {_scheduleType},
@@ -457,15 +468,18 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
               ),
               const SizedBox(height: 12),
               if (_scheduleType == ScheduleType.weekdays) ...[
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                Row(
                   children: List.generate(7, (index) {
                     final day = index + 1;
-                    return FilterChip(
-                      label: Text(_weekdayLabels[index]),
-                      selected: _scheduleDays.contains(day),
-                      onSelected: (_) => _toggleWeekday(day),
+                    return Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(left: index == 0 ? 0 : 6),
+                        child: _DayToggle(
+                          label: _weekdayLabels[index],
+                          selected: _scheduleDays.contains(day),
+                          onTap: () => _toggleWeekday(day),
+                        ),
+                      ),
                     );
                   }),
                 ),
@@ -473,12 +487,16 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
                   const SizedBox(height: 6),
                   Text(
                     _scheduleError!,
-                    style: textTheme.bodySmall
-                        ?.copyWith(color: colorScheme.error),
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.error,
+                    ),
                   ),
                 ],
               ] else if (_scheduleType == ScheduleType.timesPerWeek) ...[
-                Text('$_timesPerWeek times per week', style: textTheme.bodyMedium),
+                Text(
+                  '$_timesPerWeek times per week',
+                  style: textTheme.bodyMedium,
+                ),
                 Slider(
                   value: _timesPerWeek.toDouble(),
                   min: 1,
@@ -519,21 +537,20 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
               Text('Reminder', style: textTheme.labelLarge),
               const SizedBox(height: 8),
               InkWell(
-                borderRadius: BorderRadius.circular(Corners.control),
+                borderRadius: BorderRadius.circular(Corners.card),
                 onTap: _pickReminder,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(Corners.control),
-                    border: Border.all(color: colorScheme.outline),
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 15),
+                  constraints: const BoxConstraints(minHeight: 56),
+                  decoration: raisedDecoration(colorScheme),
                   child: Row(
                     children: [
-                      Icon(LucideIcons.bell, color: colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(_reminderTime ?? 'No reminder'),
+                      Icon(
+                        LucideIcons.bell,
+                        color: colorScheme.onSurfaceVariant,
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(_reminderTime ?? 'No reminder')),
                       if (_reminderTime != null)
                         IconButton(
                           icon: const Icon(LucideIcons.x),
@@ -544,31 +561,32 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
                 ),
               ),
               const SizedBox(height: 8),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Photo proof'),
-                subtitle: Text(
-                  _requirePhoto
-                      ? 'A day only counts once you post a photo.'
-                      : 'A tap is enough to mark this done.',
+              // Nothing to photograph when the point is not doing it.
+              if (_type != RitualType.avoid)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Photo proof'),
+                  subtitle: Text(
+                    _requirePhoto
+                        ? 'A day only counts once you post a photo.'
+                        : 'A tap is enough to mark this done.',
+                  ),
+                  secondary: const Icon(LucideIcons.camera),
+                  value: _requirePhoto,
+                  onChanged: (value) => setState(() => _requirePhoto = value),
                 ),
-                secondary: const Icon(LucideIcons.camera),
-                value: _requirePhoto,
-                onChanged: (value) => setState(() => _requirePhoto = value),
-              ),
               const SizedBox(height: 16),
               Text('Accent colour', style: textTheme.labelLarge),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: kRitualColors.map((value) {
                   final selected = value == _colorValue;
                   return GestureDetector(
                     onTap: () => setState(() => _colorValue = value),
                     child: Container(
-                      width: 36,
-                      height: 36,
+                      width: 34,
+                      height: 34,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Color(value),
@@ -577,7 +595,11 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
                             : null,
                       ),
                       child: selected
-                          ? const Icon(LucideIcons.check, color: Colors.white, size: 18)
+                          ? const Icon(
+                              LucideIcons.check,
+                              color: Colors.white,
+                              size: 18,
+                            )
                           : null,
                     ),
                   );
@@ -595,7 +617,9 @@ class _RitualEditorSheetState extends ConsumerState<_RitualEditorSheet> {
                               ? LucideIcons.archiveRestore
                               : LucideIcons.archive,
                         ),
-                        label: Text(widget.existing!.archived ? 'Unarchive' : 'Archive'),
+                        label: Text(
+                          widget.existing!.archived ? 'Unarchive' : 'Archive',
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -641,7 +665,8 @@ Future<double?> showLogAmountSheet(
   dynamic currentProgress,
 ) {
   final double value = (currentProgress?.value as num?)?.toDouble() ?? 0;
-  final double target = (currentProgress?.target as num?)?.toDouble() ?? ritual.target;
+  final double target =
+      (currentProgress?.target as num?)?.toDouble() ?? ritual.target;
   return showModalBottomSheet<double>(
     context: context,
     isScrollControlled: true,
@@ -653,7 +678,8 @@ Future<double?> showLogAmountSheet(
       return Padding(
         padding: EdgeInsets.only(
           // Clear the 3-button nav bar too, or it covers the sheet's end.
-          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom +
+          bottom:
+              MediaQuery.viewInsetsOf(sheetContext).bottom +
               MediaQuery.paddingOf(sheetContext).bottom,
         ),
         child: _LogAmountSheet(ritual: ritual, value: value, target: target),
@@ -719,8 +745,9 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final unitLabel =
-        widget.ritual.type == RitualType.timer ? 'min' : widget.ritual.unit;
+    final unitLabel = widget.ritual.type == RitualType.timer
+        ? 'min'
+        : widget.ritual.unit;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -745,8 +772,9 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
             'Target ${trimNumber(widget.target)}'
             '${unitLabel.isEmpty ? '' : ' $unitLabel'}'
             ' \u00b7 logged ${trimNumber(widget.value)} so far',
-            style: textTheme.bodyMedium
-                ?.copyWith(color: colorScheme.onSurfaceVariant),
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 20),
           Row(
@@ -762,8 +790,9 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
                   child: TextField(
                     controller: _controller,
                     textAlign: TextAlign.center,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     style: textTheme.headlineSmall,
                     decoration: InputDecoration(
                       labelText: 'Total today',
@@ -800,8 +829,9 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
           const SizedBox(height: 20),
           FilledButton(
             onPressed: _submit,
-            style:
-                FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
             child: const Text('Save'),
           ),
         ],
@@ -810,3 +840,51 @@ class _LogAmountSheetState extends State<_LogAmountSheet> {
   }
 }
 
+/// One weekday in the schedule picker: raised when off, solid accent when on.
+class _DayToggle extends StatelessWidget {
+  const _DayToggle({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: 48,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.only(bottom: 3),
+          decoration: selected
+              ? ShapeDecoration(
+                  color: scheme.primary,
+                  shape: LipBorder(
+                    radius: 12,
+                    depth: 3,
+                    lip: lipOf(scheme.primary),
+                  ),
+                )
+              : raisedDecoration(scheme, radius: 12),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

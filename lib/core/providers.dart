@@ -6,11 +6,13 @@ import 'package:rituals/models/ritual.dart';
 import 'package:rituals/models/ritual_entry.dart';
 import 'package:rituals/models/user_profiles.dart';
 import 'package:rituals/services/group_service.dart';
+import 'package:rituals/services/photo_service.dart';
 import 'package:rituals/services/ritual_service.dart';
 import 'package:rituals/services/streak_service.dart';
 import 'package:rituals/services/user_service.dart';
 
 final groupServiceProvider = Provider<GroupService>((ref) => GroupService());
+final photoServiceProvider = Provider<PhotoService>((ref) => PhotoService());
 final ritualServiceProvider = Provider<RitualService>((ref) => RitualService());
 final streakServiceProvider = Provider<StreakService>((ref) => StreakService());
 final userServiceProvider = Provider<UserService>(

@@ -191,7 +191,7 @@ class _RitualTimerScreenState extends State<_RitualTimerScreen> {
                                 'Target reached',
                                 style: textTheme.labelLarge?.copyWith(
                                   color: accent,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ],

@@ -156,22 +156,46 @@ const REMINDER_LINES: Record<string, string[]> = {
   ],
 };
 
+// Reminders for a habit being broken ("avoid" rituals), mirroring
+// Moment.resist in lib/features/commentary/lines.dart.
+const RESIST_LINES: Record<string, string[]> = {
+  kind: [
+    "Checking in on {ritual}. You are doing well.",
+    "Hold steady on {ritual} today.",
+  ],
+  dry: [
+    "{ritual}. Still holding? Good.",
+    "The tricky hour for {ritual}. Carry on.",
+  ],
+  brutal: [
+    "{ritual}. Do not even think about it.",
+    "Hands off. {ritual} is not negotiable today.",
+  ],
+  brutalProfane: [
+    "{ritual}. Do not even think about it.",
+    "Hell no. {ritual}, remember?",
+  ],
+};
+
 /**
  * Picks a reminder line in the user's commentary tone.
  * @param {string} tone The user's commentary tone.
  * @param {boolean} allowProfanity Whether swearing lines may be used.
  * @param {string} ritual Ritual title to fill in.
+ * @param {boolean} avoid Whether the ritual is a habit being broken.
  * @return {string} The reminder text.
  */
 function reminderBody(
   tone: string | undefined,
   allowProfanity: boolean,
-  ritual: string
+  ritual: string,
+  avoid = false
 ): string {
   if (tone === "off") return "";
   let key = tone ?? "kind";
   if (key === "brutal" && allowProfanity) key = "brutalProfane";
-  const pool = REMINDER_LINES[key] ?? REMINDER_LINES.kind;
+  const lines = avoid ? RESIST_LINES : REMINDER_LINES;
+  const pool = lines[key] ?? lines.kind;
   const line = pool[Math.floor(Math.random() * pool.length)];
   return line.replace("{ritual}", ritual);
 }
@@ -270,7 +294,7 @@ export const sendDailyReminders = onSchedule("every 15 minutes", async () => {
         localDay.getUTCDate()
       ));
 
-      // Skip anyone who already logged it today.
+      // Skip anyone who already logged it today (for an avoid ritual, slipped).
       const loggedSnapshot = await db
         .collection("groups")
         .doc(groupId)
@@ -294,7 +318,8 @@ export const sendDailyReminders = onSchedule("every 15 minutes", async () => {
         const body = reminderBody(
           userData?.commentaryTone,
           userData?.allowProfanity === true,
-          ritual.title as string
+          ritual.title as string,
+          ritual.type === "avoid"
         );
         if (!body) continue;
 

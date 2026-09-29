@@ -13,12 +13,21 @@ enum Moment {
   streakMilestone,
   skipped,
   undone,
+
+  /// The target is met but the photo that proves it is still missing.
+  awaitingPhoto,
   firstRitual,
   streakBroken,
   longLapse,
   strongScore,
   weakScore,
   reminder,
+
+  /// A slip was logged on a habit being broken.
+  slipped,
+
+  /// The reminder for a habit being broken: hold off, rather than go do it.
+  resist,
 }
 
 /// What the app knows when it speaks.

@@ -37,7 +37,6 @@ dependencies:
   firebase_storage: ^13.0.6
   firebase_messaging: ^16.1.1
   flutter_riverpod: ^3.2.1
-  image: ^4.8.0
   path_provider: ^2.1.5
   home_widget: ^0.9.0
   flutter_local_notifications: ^21.0.0
@@ -54,7 +53,6 @@ dependencies:
   emoji_picker_flutter: ^4.5.4
   flutter_confetti: ^0.9.2
   google_sign_in_web: ^1.0.0
-  web: ^1.1.0
   firebase_app_check: ^0.4.7
   hive_ce: ^2.19.3
   cross_file: ^0.3.5+5
@@ -83,6 +81,19 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  fonts:
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito-400.ttf
+        - asset: assets/fonts/Nunito-600.ttf
+          weight: 600
+        - asset: assets/fonts/Nunito-700.ttf
+          weight: 700
+        - asset: assets/fonts/Nunito-800.ttf
+          weight: 800
+        - asset: assets/fonts/Nunito-900.ttf
+          weight: 900
 
   # To add assets to your application, add an assets section, like this:
   # assets:

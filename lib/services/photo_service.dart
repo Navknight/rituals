@@ -1,30 +1,18 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class PhotoService {
-  Future<({Uint8List bytes, String? localPath})> compressAndSave(
-    Uint8List rawBytes,
-  ) async {
-    final original = img.decodeImage(rawBytes);
-    final resized = img.copyResize(original!, width: 800);
-    final compressedBytes = Uint8List.fromList(
-      img.encodeJpg(resized, quality: 80),
+  /// Keeps a copy on device. The picker has already resized and compressed.
+  Future<String?> saveLocal(Uint8List bytes) async {
+    if (kIsWeb) return null;
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      '${dir.path}/rituals_${DateTime.now().millisecondsSinceEpoch}.jpg',
     );
-
-    String? localPath;
-    if (!kIsWeb) {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File(
-        '${dir.path}/rituals_${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
-      await file.writeAsBytes(compressedBytes);
-      localPath = file.path;
-    }
-
-    return (bytes: compressedBytes, localPath: localPath);
+    await file.writeAsBytes(bytes);
+    return file.path;
   }
 
   Future<String> uploadToRelay(

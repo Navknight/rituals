@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:rituals/app/theme.dart';
 import 'package:rituals/core/providers.dart';
 import 'package:rituals/features/camera/pending_capture.dart';
 import 'package:rituals/features/camera/preview_screen.dart';
@@ -217,7 +218,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
         ],
       ),
-      floatingActionButton: _tab == 0
+      // The empty state has its own "Add a ritual" button, so the + waits for
+      // the first ritual.
+      floatingActionButton: _tab == 0 &&
+              (ref.watch(ritualsProvider(widget.groupId)).value?.isNotEmpty ??
+                  false)
           ? FloatingActionButton(
               onPressed: () =>
                   showRitualEditor(context, ref, groupId: widget.groupId),
@@ -243,23 +248,41 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         child: Column(
           children: [
             if (_notifBanner)
-              MaterialBanner(
-                padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-                leading: Icon(LucideIcons.bell,
-                    color: theme.colorScheme.primary),
-                content: const Text(
-                  'Turn on notifications to get your reminders.',
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
+                decoration: raisedDecoration(theme.colorScheme),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(LucideIcons.bell,
+                            color: theme.colorScheme.primary),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Turn on notifications to get your reminders.',
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () =>
+                              setState(() => _notifBanner = false),
+                          child: const Text('Not now'),
+                        ),
+                        TextButton(
+                          onPressed: _enableNotifications,
+                          child: const Text('Turn on'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => setState(() => _notifBanner = false),
-                    child: const Text('Not now'),
-                  ),
-                  FilledButton(
-                    onPressed: _enableNotifications,
-                    child: const Text('Enable'),
-                  ),
-                ],
               ),
             Expanded(
               child: Center(

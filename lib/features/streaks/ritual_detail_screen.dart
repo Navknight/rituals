@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:image_picker/image_picker.dart' show ImageSource;
 import 'package:rituals/shared/recent_days.dart';
 import 'package:rituals/app/theme.dart';
 import 'package:rituals/core/providers.dart';
@@ -65,23 +66,24 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
               existing: ritual,
             ),
           ),
-          if (!ritual.requirePhoto)
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'photo') _openCamera(context);
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'photo', child: Text('Add a photo')),
-              ],
-            ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              _openCamera(
+                context,
+                value == 'gallery' ? ImageSource.gallery : ImageSource.camera,
+              );
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'photo', child: Text('Add a photo')),
+              if (!ritual.requirePhoto)
+                const PopupMenuItem(
+                  value: 'gallery',
+                  child: Text('Choose from gallery'),
+                ),
+            ],
+          ),
         ],
       ),
-      floatingActionButton: ritual.requirePhoto
-          ? FloatingActionButton(
-              onPressed: () => _openCamera(context),
-              child: const Icon(LucideIcons.camera),
-            )
-          : null,
       body: entriesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
@@ -116,11 +118,17 @@ class _RitualDetailScreenState extends ConsumerState<RitualDetailScreen> {
     );
   }
 
-  void _openCamera(BuildContext context) {
+  void _openCamera(
+    BuildContext context, [
+    ImageSource source = ImageSource.camera,
+  ]) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) =>
-            CameraScreen(groupId: widget.groupId, ritualId: widget.ritual.id),
+        builder: (context) => CameraScreen(
+          groupId: widget.groupId,
+          ritualId: widget.ritual.id,
+          source: source,
+        ),
       ),
     );
   }
@@ -162,7 +170,11 @@ class _RitualDetailBody extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _StreakHero(streak: info.currentStreak, ritual: ritual),
-              _Remark(ritual: ritual, info: info),
+              _Remark(
+                ritual: ritual,
+                info: info,
+                awaitingPhoto: today.awaitingPhoto,
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _TodayAction(
@@ -174,64 +186,31 @@ class _RitualDetailBody extends ConsumerWidget {
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                 padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: scheme.outlineVariant),
-                ),
+                decoration: raisedDecoration(scheme, radius: 20),
                 child: RecentDaysStrip(
                   groupId: groupId,
                   ritual: ritual,
                   entries: entries,
                   days: info.days,
-                  onTapPhoto: (entry) => _PhotosStrip.openPhoto(
-                    context,
-                    groupId,
-                    entry,
-                  ),
+                  onTapPhoto: (entry) =>
+                      _PhotosStrip.openPhoto(context, groupId, entry),
                 ),
               ),
               const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: StatRow(
-                  children: [
-                    StatTile(
-                      label: 'Score',
-                      value: '${(info.score * 100).round()}%',
-                      icon: LucideIcons.gauge,
-                      accent: accent,
-                    ),
-                    StatTile(
-                      label: 'Completion',
-                      value: '${(info.completionRate * 100).round()}%',
-                      icon: LucideIcons.target,
-                      accent: accent,
-                    ),
-                    StatTile(
-                      label: 'Current streak',
-                      value: '${info.currentStreak}',
-                      icon: LucideIcons.flame,
-                      accent: accent,
-                    ),
-                    StatTile(
-                      label: 'Best streak',
-                      value: '${info.longestStreakOverall}',
-                      icon: LucideIcons.trophy,
-                      accent: accent,
-                    ),
-                    StatTile(
-                      label: 'Total done',
-                      value: '${info.totalCompletions}',
-                      icon: LucideIcons.check,
-                      accent: accent,
-                    ),
-                    StatTile(
-                      label: 'Best this month',
-                      value: '${info.longestStreakThisMonth}',
-                      icon: LucideIcons.calendarCheck,
-                      accent: accent,
-                    ),
+                child: ScoreCard(
+                  label: 'Habit score',
+                  score: info.score,
+                  accent: accent,
+                  caption:
+                      'Recent days count most. Skipped days are left '
+                      'out.',
+                  figures: [
+                    ('${(info.completionRate * 100).round()}%', 'kept'),
+                    ('${info.longestStreakOverall}', 'best streak'),
+                    ('${info.totalCompletions}', 'times done'),
+                    ('${info.longestStreakThisMonth}', 'best run this month'),
                   ],
                 ),
               ),
@@ -330,10 +309,15 @@ class _Section extends StatelessWidget {
 
 /// One line of commentary about how this ritual is actually going.
 class _Remark extends ConsumerWidget {
-  const _Remark({required this.ritual, required this.info});
+  const _Remark({
+    required this.ritual,
+    required this.info,
+    required this.awaitingPhoto,
+  });
 
   final Ritual ritual;
   final StreakInfo info;
+  final bool awaitingPhoto;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -342,7 +326,9 @@ class _Remark extends ConsumerWidget {
 
     final lastDone = _daysSinceLastDone();
     final Moment moment;
-    if (info.totalCompletions == 0) {
+    if (awaitingPhoto) {
+      moment = Moment.awaitingPhoto;
+    } else if (info.totalCompletions == 0) {
       moment = Moment.firstRitual;
     } else if (lastDone != null && lastDone >= 7) {
       moment = Moment.longLapse;
@@ -372,20 +358,13 @@ class _Remark extends ConsumerWidget {
     if (line == null) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          line,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontStyle: FontStyle.italic,
-            height: 1.35,
-          ),
+      padding: const EdgeInsets.fromLTRB(32, 0, 32, 20),
+      child: Text(
+        line,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          height: 1.35,
         ),
       ),
     );
@@ -422,7 +401,7 @@ class _StreakHero extends StatelessWidget {
             height: 172,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: scheme.surfaceContainerLow,
+              color: Color(ritual.colorValue).withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Stack(
@@ -441,7 +420,7 @@ class _StreakHero extends StatelessWidget {
                 const Positioned(
                   right: -22,
                   bottom: -6,
-                  child: Icon(LucideIcons.zap, size: 34, color: streakBolt),
+                  child: Icon(LucideIcons.flame, size: 34, color: streakColor),
                 ),
               ],
             ),
@@ -473,10 +452,9 @@ class _StreakHero extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             streak == 1 ? '1 day streak' : '$streak day streak',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: scheme.onSurfaceVariant),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -518,6 +496,35 @@ class _TodayActionState extends ConsumerState<_TodayAction> {
     final controller = ref.read(ritualControllerProvider);
     final accent = Color(ritual.colorValue);
 
+    if (ritual.type == RitualType.avoid) {
+      return OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          foregroundColor: today.slipped
+              ? null
+              : Theme.of(context).colorScheme.error,
+        ),
+        onPressed: _busy || today.skipped
+            ? null
+            : () => _run(
+                () => today.slipped
+                    ? controller.clear(groupId: widget.groupId, ritual: ritual)
+                    : controller.complete(
+                        groupId: widget.groupId,
+                        ritual: ritual,
+                      ),
+              ),
+        icon: Icon(today.slipped ? LucideIcons.undo2 : LucideIcons.x),
+        label: Text(
+          today.skipped
+              ? 'Skipped today'
+              : today.slipped
+              ? 'Take back today\'s slip'
+              : 'I slipped today',
+        ),
+      );
+    }
+
     if (ritual.type == RitualType.check) {
       return Column(
         children: [
@@ -557,15 +564,15 @@ class _TodayActionState extends ConsumerState<_TodayAction> {
               today.isDone
                   ? LucideIcons.checkCheck
                   : ritual.requirePhoto
-                      ? LucideIcons.camera
-                      : LucideIcons.check,
+                  ? LucideIcons.camera
+                  : LucideIcons.check,
             ),
             label: Text(
               today.isDone
                   ? 'Done today'
                   : ritual.requirePhoto
-                      ? (today.awaitingPhoto ? 'Add the photo' : 'Take a photo')
-                      : 'Mark done',
+                  ? (today.awaitingPhoto ? 'Add the photo' : 'Take a photo')
+                  : 'Mark done',
             ),
           ),
           if (!today.isDone && !today.skipped)
@@ -689,7 +696,11 @@ class _PhotosStrip extends ConsumerWidget {
   void _openPhoto(BuildContext context, WidgetRef ref, RitualEntry entry) =>
       openPhoto(context, groupId, entry);
 
-  static void openPhoto(BuildContext context, String groupId, RitualEntry entry) {
+  static void openPhoto(
+    BuildContext context,
+    String groupId,
+    RitualEntry entry,
+  ) {
     showDialog<void>(
       context: context,
       builder: (context) => Dialog(

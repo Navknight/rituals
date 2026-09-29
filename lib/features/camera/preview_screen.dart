@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:cross_file/cross_file.dart' show XFile;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rituals/core/providers.dart';
 import 'package:rituals/services/local_photo_store.dart';
 import 'package:rituals/services/widget_service.dart';
-import 'package:rituals/features/camera/camera_provider.dart';
 
 class PreviewScreen extends ConsumerStatefulWidget {
   final String photoPath;
@@ -167,10 +167,9 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
           : await File(widget.photoPath).readAsBytes();
 
       final photoService = ref.read(photoServiceProvider);
-      final result = await photoService.compressAndSave(rawBytes);
-      _localPath = result.localPath;
+      final localPath = _localPath = await photoService.saveLocal(rawBytes);
       final url = _uploadedUrl = await photoService.uploadToRelay(
-        result.bytes,
+        rawBytes,
         widget.groupId,
         widget.ritualId,
       );
@@ -183,13 +182,14 @@ class _PreviewScreenState extends ConsumerState<PreviewScreen> {
             day: DateTime.now(),
             value: widget.completionValue,
             photoUrl: url,
-            localPath: result.localPath,
+            localPath: localPath,
             caption: caption.isEmpty ? null : caption,
           );
+      HapticFeedback.mediumImpact();
 
       // The relay is pruned, so keep the only durable copy on this device.
       // On web this is the only copy there is.
-      await LocalPhotoStore.instance.put(entry.id, result.bytes);
+      await LocalPhotoStore.instance.put(entry.id, rawBytes);
 
       await _refreshWidget(uid, caption);
 

@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rituals/models/ritual.dart';
 import 'package:rituals/models/ritual_entry.dart';
 
@@ -102,8 +101,6 @@ class StreakInfo {
         value: 0,
       );
 
-  bool hasCompleted(DateTime day) => resultFor(day).counts;
-
   /// The weekday the ritual is kept most often, or null without enough data.
   int? get strongestWeekday => _extremeWeekday(highest: true);
 
@@ -126,37 +123,12 @@ class StreakInfo {
 }
 
 class StreakService {
-  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
-
   /// Days of score history kept for the trend chart.
   static const int historyDays = 90;
 
   /// Loop Habit Tracker's decay constant. Chosen so a perfectly kept daily
   /// ritual scores about 80% after a month and 96% after two.
   static const double _scoreHalfLife = 13.0;
-
-  Future<StreakInfo> loadStreak({
-    required String groupId,
-    required Ritual ritual,
-    String? userId,
-  }) async {
-    final snapshot = await _firestore
-        .collection('groups')
-        .doc(groupId)
-        .collection('rituals')
-        .doc(ritual.id)
-        .collection('entries')
-        .orderBy('createdAt')
-        .get();
-
-    var entries =
-        snapshot.docs.map((doc) => RitualEntry.fromMap(doc.data())).toList();
-    if (userId != null) {
-      entries = entries.where((e) => e.userId == userId).toList();
-    }
-
-    return analyse(ritual: ritual, entries: entries);
-  }
 
   /// Collapses entries to one result per day and derives every statistic.
   ///
@@ -186,6 +158,7 @@ class StreakService {
     skips.removeWhere((day) => (totals[day] ?? 0) > 0);
 
     final target = ritual.target <= 0 ? 1.0 : ritual.target;
+    final avoid = ritual.type == RitualType.avoid;
     final firstDay = _firstDay(ritual, totals.keys, skips);
 
     final days = <String, DayResult>{};
@@ -213,16 +186,25 @@ class StreakService {
         day = day.add(const Duration(days: 1))) {
       final key = RitualEntry.dayKey(day);
       final value = totals[key] ?? 0;
-      final progress = (value / target).clamp(0.0, 1.0);
+      // A habit being broken is kept by logging nothing at all.
+      final progress = avoid
+          ? (value > 0 ? 0.0 : 1.0)
+          : (value / target).clamp(0.0, 1.0);
       final due = ritual.isDueOn(day);
 
       // Photo proof is the whole point of a ritual that asks for it: hitting
       // the target without one leaves the day unfinished.
-      final proven = !ritual.requirePhoto || photoDays.contains(key);
+      final proven = avoid || !ritual.requirePhoto || photoDays.contains(key);
 
       final DayStatus status;
       if (skips.contains(key)) {
         status = DayStatus.skipped;
+      } else if (avoid) {
+        status = !due
+            ? DayStatus.notDue
+            : value > 0
+                ? DayStatus.missed
+                : DayStatus.done;
       } else if (progress >= 1 && proven) {
         status = DayStatus.done;
       } else if (value > 0) {
@@ -253,11 +235,13 @@ class StreakService {
           }
         }
 
-        // Today is still open, so an unfinished target must not drag the
-        // score down yet.
-        final isOpenToday = day == todayMidnight && progress < 1;
+        // Today is still open, so an unfinished day must not drag the
+        // score down yet. A day still missing its photo earns nothing, the
+        // same as it earns no streak.
+        final isOpenToday =
+            day == todayMidnight && status != DayStatus.done;
         if (!isOpenToday) {
-          score = score * multiplier + progress * (1 - multiplier);
+          score = score * multiplier + (proven ? progress : 0) * (1 - multiplier);
         }
       }
 
@@ -324,8 +308,8 @@ class StreakService {
           break;
         case DayStatus.partial:
         case DayStatus.missed:
-          // Today still has time left on the clock.
-          if (day == todayMidnight) break;
+          // Today still has time left on the clock, unless it was a slip.
+          if (day == todayMidnight && ritual.type != RitualType.avoid) break;
           return streak;
         case DayStatus.outOfRange:
           return streak;

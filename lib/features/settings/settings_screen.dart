@@ -66,6 +66,7 @@ class SettingsScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SegmentedButton<ThemeMode>(
+              showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: ThemeMode.system, label: Text('System')),
                 ButtonSegment(value: ThemeMode.light, label: Text('Light')),
@@ -268,7 +269,7 @@ class _SectionHeader extends StatelessWidget {
         text,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w800,
             ),
       ),
     );
@@ -295,8 +296,8 @@ class _GuestUpgradeCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
       child: Card(
-        color: scheme.primaryContainer,
         margin: EdgeInsets.zero,
+        shape: raisedDecoration(scheme, edge: scheme.primary).shape,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -305,8 +306,7 @@ class _GuestUpgradeCard extends ConsumerWidget {
               Text(
                 'Save your progress',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: scheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
               ),
               const SizedBox(height: 6),
@@ -314,9 +314,7 @@ class _GuestUpgradeCard extends ConsumerWidget {
                 'A guest account only lives on this device, in this login '
                 'session. Connect a Google account so your rituals and '
                 'streaks are safe.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onPrimaryContainer,
-                    ),
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 12),
               FilledButton.icon(

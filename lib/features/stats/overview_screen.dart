@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:rituals/features/stats/stat_widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:rituals/core/providers.dart';
-import 'package:rituals/features/stats/stat_widgets.dart';
+import 'package:rituals/shared/recent_days.dart' show streakColor;
 import 'package:rituals/features/streaks/ritual_detail_screen.dart';
 import 'package:rituals/models/ritual.dart';
 import 'package:rituals/models/ritual_entry.dart';
@@ -119,42 +120,20 @@ class OverviewScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
             children: [
-              StatRow(children: [
-                StatTile(
-                  label: 'Momentum',
-                  value: '${(avgScore * 100).round()}%',
-                  icon: LucideIcons.trendingUp,
-                ),
-                StatTile(
-                  label: 'Best streak',
-                  value: '$bestStreak',
-                  hint: bestStreak == 1 ? 'day' : 'days',
-                  icon: LucideIcons.flame,
-                ),
-              ]),
-              const SizedBox(height: 10),
-              StatRow(children: [
-                StatTile(
-                  label: 'Perfect days',
-                  value: '$perfectDays',
-                  hint: 'last 30 days',
-                  icon: LucideIcons.circleCheck,
-                ),
-                StatTile(
-                  label: 'Times logged',
-                  value: '$totalDone',
-                  icon: LucideIcons.listChecks,
-                ),
-              ]),
-              const SizedBox(height: 26),
-              Text(
-                'BY RITUAL',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.w700,
-                ),
+              ScoreCard(
+                label: 'Momentum',
+                score: avgScore,
+                caption: 'Average habit score across ${summaries.length} '
+                    '${summaries.length == 1 ? 'ritual' : 'rituals'}. Recent '
+                    'days count most.',
+                figures: [
+                  ('$bestStreak', 'day streak going'),
+                  ('$perfectDays', 'perfect days of 30'),
+                  ('$totalDone', 'times logged'),
+                ],
               ),
+              const SizedBox(height: 26),
+              Text('By ritual', style: theme.textTheme.titleLarge),
               const SizedBox(height: 8),
               ...summaries.map((s) => _SummaryCard(
                     summary: s,
@@ -229,16 +208,16 @@ class _SummaryCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
-                  Icon(LucideIcons.flame, size: 15, color: accent),
+                  const Icon(LucideIcons.flame, size: 15, color: streakColor),
                   const SizedBox(width: 3),
                   Text(
                     '${info.currentStreak}',
                     style: theme.textTheme.titleSmall?.copyWith(
-                      color: accent,
+                      color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
