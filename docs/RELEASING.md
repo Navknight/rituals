@@ -55,6 +55,20 @@ different key means regenerating the fingerprint:
 keytool -list -v -keystore upload-keystore.jks -alias upload | grep SHA256
 ```
 
+## Google Play
+
+Play re-signs every install with its own app signing key (Play Console >
+Protected with Play > App signing). That key's SHA-1 and SHA-256 must be
+registered on the Firebase Android app, or Google sign-in fails on Play
+installs, and its SHA-256 must be in `web/assetlinks.json`, or invite links
+open in the browser. Both are done; redo them only if the key changes.
+
+Build the Play bundle with the self-updater off:
+
+```
+flutter build appbundle --release --dart-define=PLAY_STORE=true
+```
+
 ## Submitting to IzzyOnDroid
 
 Open a request at the [IzzyOnDroid repo issue tracker](https://gitlab.com/IzzyOnDroid/repo/-/issues).
