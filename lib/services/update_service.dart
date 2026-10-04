@@ -6,6 +6,10 @@ import 'package:http/http.dart' as http;
 /// The version this build was made from, filled in by flutter from pubspec.yaml.
 const appVersion = String.fromEnvironment('FLUTTER_BUILD_NAME');
 
+/// Set with `--dart-define=PLAY_STORE=true` for the Play build, where Play
+/// does the updating and offering a GitHub download breaks its policy.
+const playStoreBuild = bool.fromEnvironment('PLAY_STORE');
+
 /// Checks GitHub for a newer release. The PWA is served fresh from Hosting on
 /// every open, so only the Android build asks.
 class UpdateService {
@@ -15,7 +19,11 @@ class UpdateService {
   /// Returns the newer release's tag and page, or null when up to date,
   /// offline, or not on Android.
   Future<({String version, String url})?> check() async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+    if (playStoreBuild ||
+        kIsWeb ||
+        defaultTargetPlatform != TargetPlatform.android) {
+      return null;
+    }
     try {
       final response = await http
           .get(Uri.parse(_latest))

@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
@@ -23,5 +24,21 @@ class AuthService {
     } catch (_) {
       // Nothing to sign out of when the session was a guest one.
     }
+  }
+
+  /// Deleting an account needs a fresh sign-in. Guests have nothing to prove;
+  /// a Google account is asked to pick itself again, and picking a different
+  /// one fails here, before any data has been touched.
+  Future<void> reauthenticate() async {
+    final user = currentUser;
+    if (user == null || user.isAnonymous) return;
+    if (kIsWeb) {
+      await user.reauthenticateWithPopup(GoogleAuthProvider());
+      return;
+    }
+    final account = await GoogleSignIn.instance.authenticate();
+    await user.reauthenticateWithCredential(
+      GoogleAuthProvider.credential(idToken: account.authentication.idToken),
+    );
   }
 }

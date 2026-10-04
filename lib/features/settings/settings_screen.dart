@@ -34,16 +34,17 @@ class SettingsScreen extends ConsumerWidget {
               padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (e, _) => Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('$e'),
-            ),
+            error: (e, _) =>
+                Padding(padding: const EdgeInsets.all(16), child: Text('$e')),
             data: (profile) {
               final name = profile?.displayName ?? 'Someone';
               return Column(
                 children: [
                   ListTile(
-                    leading: UserAvatar(name: name, photoUrl: profile?.photoUrl),
+                    leading: UserAvatar(
+                      name: name,
+                      photoUrl: profile?.photoUrl,
+                    ),
                     title: Text(name),
                     subtitle: Text(
                       isAnonymous ? 'Guest account' : (user?.email ?? ''),
@@ -54,8 +55,19 @@ class SettingsScreen extends ConsumerWidget {
                   if (isAnonymous) _GuestUpgradeCard(),
                   ListTile(
                     leading: Icon(LucideIcons.logOut, color: scheme.error),
-                    title: Text('Sign out', style: TextStyle(color: scheme.error)),
+                    title: Text(
+                      'Sign out',
+                      style: TextStyle(color: scheme.error),
+                    ),
                     onTap: () => _confirmSignOut(context, ref, isAnonymous),
+                  ),
+                  ListTile(
+                    leading: Icon(LucideIcons.trash2, color: scheme.error),
+                    title: Text(
+                      'Delete account',
+                      style: TextStyle(color: scheme.error),
+                    ),
+                    onTap: () => _confirmDeleteAccount(context, ref),
                   ),
                 ],
               );
@@ -89,8 +101,7 @@ class SettingsScreen extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final accent = AccentColor.values[index];
                 final selected = settings.accent == accent;
-                final accentColor =
-                    accent.color;
+                final accentColor = accent.color;
                 return Tooltip(
                   message: accent.label,
                   child: InkWell(
@@ -108,7 +119,11 @@ class SettingsScreen extends ConsumerWidget {
                             : null,
                       ),
                       child: selected
-                          ? const Icon(LucideIcons.check, color: Colors.white, size: 18)
+                          ? const Icon(
+                              LucideIcons.check,
+                              color: Colors.white,
+                              size: 18,
+                            )
                           : null,
                     ),
                   ),
@@ -131,10 +146,9 @@ class SettingsScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             child: Text(
               'How the app talks to you about your habits.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
           RadioGroup<CommentaryTone>(
@@ -186,7 +200,9 @@ class SettingsScreen extends ConsumerWidget {
           _SectionHeader('About'),
           const ListTile(
             title: Text('Rituals'),
-            subtitle: Text('Track the habits you care about, alone or together.'),
+            subtitle: Text(
+              'Track the habits you care about, alone or together.',
+            ),
           ),
           const ListTile(title: Text('Version'), subtitle: Text(appVersion)),
         ],
@@ -223,6 +239,53 @@ class SettingsScreen extends ConsumerWidget {
     await ref.read(userServiceProvider).setDisplayName(uid, name);
   }
 
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete account'),
+        content: const Text(
+          'This deletes your account, your personal space and every log and '
+          'photo you posted. Shared spaces you are in keep going without you. '
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final auth = ref.read(authServiceProvider);
+    try {
+      await auth.reauthenticate();
+      final user = auth.currentUser;
+      if (user == null) return;
+      await ref.read(userServiceProvider).deleteAccount(user);
+      await auth.signOut();
+    } catch (e) {
+      debugPrint('[SettingsScreen] delete account failed: $e');
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Could not delete the account. Try again.'),
+        ),
+      );
+    }
+  }
+
   Future<void> _confirmSignOut(
     BuildContext context,
     WidgetRef ref,
@@ -235,7 +298,7 @@ class SettingsScreen extends ConsumerWidget {
         content: Text(
           isAnonymous
               ? 'This is a guest account. Once you sign out, its rituals and '
-                  'streaks cannot be recovered.'
+                    'streaks cannot be recovered.'
               : 'You can sign back in at any time.',
         ),
         actions: [
@@ -268,9 +331,9 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w800,
-            ),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -284,9 +347,9 @@ class _GuestUpgradeCard extends ConsumerWidget {
       await ref.read(authServiceProvider).signInWithGoogle();
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not connect: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not connect: $e')));
     }
   }
 
@@ -305,9 +368,9 @@ class _GuestUpgradeCard extends ConsumerWidget {
             children: [
               Text(
                 'Save your progress',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
               Text(
@@ -329,7 +392,6 @@ class _GuestUpgradeCard extends ConsumerWidget {
     );
   }
 }
-
 
 /// Shows a real line in the chosen tone so the setting is not a guess.
 class _TonePreview extends ConsumerWidget {
@@ -358,14 +420,18 @@ class _TonePreview extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(LucideIcons.quote, size: 15,
-              color: theme.colorScheme.onSurfaceVariant),
+          Icon(
+            LucideIcons.quote,
+            size: 15,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               line,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontStyle: FontStyle.italic),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ),
         ],
